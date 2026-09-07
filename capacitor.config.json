@@ -1,0 +1,8 @@
+{
+  "appId": "com.vodiymdf.app",
+  "appName": "Vodiy MDF",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}
