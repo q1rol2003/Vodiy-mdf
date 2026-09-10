@@ -2101,7 +2101,8 @@
                     document.getElementById('voice-rec-timer').innerText = '00:00';
 
                     if(res && res.filePath && window.Capacitor.Plugins.Filesystem) {
-                        window.Capacitor.Plugins.Filesystem.readFile({ path: res.filePath }).then(function(fileRes) {
+                        var voiceFileUri = res.filePath.indexOf('file://') === 0 ? res.filePath : ('file://' + res.filePath);
+                        window.Capacitor.Plugins.Filesystem.readFile({ path: voiceFileUri }).then(function(fileRes) {
                             var byteChars = atob(fileRes.data);
                             var byteNumbers = new Array(byteChars.length);
                             for(var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
