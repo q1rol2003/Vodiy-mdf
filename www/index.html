@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vodiy MDF - Boshqaruv Tizimi</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { background: #f1f5f9; display: flex; height: 100vh; }
+
+        #receipt-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 99998;
+        }
+        #receipt-box {
+            background: #fff; border-radius: 10px; padding: 20px; width: 320px; max-width: 92%;
+            max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+        #print-target {
+            font-family: 'Courier New', monospace; font-weight: 700; font-size: 15px;
+            line-height: 1.5; color: #000;
+        }
+        #print-target p { margin: 3px 0; }
+        #print-target h3 { text-align: center; margin: 0 0 6px; font-size: 18px; letter-spacing: 1px; }
+        #print-target hr { border: none; border-top: 2px dashed #000; margin: 8px 0; }
+        #print-target .big { font-size: 17px; font-weight: 900; }
+        #print-target .center { text-align: center; }
+        .receipt-actions { display: flex; gap: 8px; margin-top: 18px; }
+        .receipt-actions button {
+            flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold;
+            font-size: 15px; cursor: pointer;
+        }
+        .receipt-actions .btn-print { background: #2563eb; color: #fff; }
+        .receipt-actions .btn-close { background: #e2e8f0; color: #0f172a; }
+
+        @page { size: 58mm auto; margin: 0; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-target, #print-target * { visibility: visible; }
+            #print-target {
+                position: absolute; left: 0; top: 0; width: 58mm; padding: 0 1mm;
+                font-size: 24px; line-height: 1.55; font-weight: 900; color: #000;
+            }
+            #print-target h3 { font-size: 27px; }
+            #print-target .big { font-size: 26px; }
+            #print-target hr { border-top: 3px dashed #000; margin: 7px 0; }
+        }
+
+        #login-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 99999;
+        }
+        .login-box {
+            background: white; padding: 30px; border-radius: 12px;
+            text-align: center; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .login-box input {
+            width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd;
+            border-radius: 6px; font-size: 18px; text-align: center; outline: none;
+        }
+        .login-box button {
+            width: 100%; padding: 12px; background: #2563eb; color: white;
+            border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+
+        #main-app { display: none; width: 100%; height: 100vh; flex-direction: row; }
+        .sidebar { width: 240px; background: #0f172a; color: white; padding: 20px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between; }
+        .sidebar h2 { margin-bottom: 20px; font-size: 20px; }
+        .sidebar nav button {
+            display: block; width: 100%; padding: 12px; margin-bottom: 8px;
+            background: transparent; color: #94a3b8; border: none; text-align: left;
+            border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500;
+        }
+        .sidebar nav button.active { background: #2563eb; color: white; font-weight: bold; }
+        
+        .content { flex: 1; padding: 25px; overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: border-color 0.15s ease, opacity 0.15s ease; }
+        .card:hover { border-color: #2563eb; }
+        .card.out-of-stock { opacity: 0.45; cursor: not-allowed; }
+        .card.out-of-stock:hover { border-color: #e2e8f0; }
+
+        .pos-select-bar { display: flex; gap: 10px; margin-bottom: 6px; }
+        .pos-select-bar select { flex: 2; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: white; }
+        .pos-select-bar input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; min-width: 70px; }
+        .pos-select-bar button { flex: 1.4; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .pos-select-bar button:hover { background: #059669; }
+
+        .cart-line { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+        .cart-line .cl-info { flex: 1; min-width: 0; }
+        .cart-line .cl-name { font-size: 13.5px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cart-line .cl-sum { font-size: 12.5px; color: #64748b; }
+        .cart-line .cl-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .cart-line .cl-controls button {
+            width: 24px; height: 24px; border: none; border-radius: 4px; background: #f1f5f9;
+            color: #0f172a; font-weight: 800; cursor: pointer; font-size: 14px; line-height: 1;
+        }
+        .cart-line .cl-controls button:hover { background: #e2e8f0; }
+        .cart-line .cl-controls .cl-remove { background: #fee2e2; color: #ef4444; }
+        .cart-line .cl-controls .cl-remove:hover { background: #fecaca; }
+        .cart-line .cl-controls .cl-qty { font-size: 13px; font-weight: 700; min-width: 18px; text-align: center; }
+
+        .form-grid { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .form-grid input, .form-grid textarea { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; }
+        .form-grid textarea { grid-column: span 3; resize: vertical; height: 60px; }
+        .form-grid button { grid-column: span 3; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; }
+        .form-grid button:hover { background: #1d4ed8; }
+        .form-grid button:active { transform: scale(0.98); }
+
+        .btn-add-inv {
+            grid-column: span 4;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        }
+        .btn-add-inv:hover { background: #059669; box-shadow: 0 4px 10px rgba(16,185,129,0.35); }
+        .btn-add-inv:active { transform: scale(0.98); }
+
+        /* ===== OMBOR — ZAMONAVIY KARTA KO'RINISHI ===== */
+        .inv-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .inv-card { background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+        .inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .inv-card-name { font-size: 15px; font-weight: 800; color: #0f172a; }
+        .inv-card-meta { font-size: 12.5px; color: #64748b; margin-top: 3px; }
+        .inv-card-price { font-size: 14px; font-weight: 800; color: #2563eb; white-space: nowrap; text-align: right; }
+        .inv-card-qty { display: inline-block; margin-top: 8px; padding: 4px 11px; border-radius: 7px; background: #f1f5f9; font-size: 12.5px; font-weight: 800; color: #0f172a; }
+        .inv-card-qty.low { background: #fef2f2; color: #ef4444; }
+        .inv-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+        .inv-card-actions button {
+            flex: 1 1 0; min-width: 64px; padding: 9px 6px; border: none; border-radius: 7px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap;
+        }
+        .inv-btn-add { background: #dcfce7; color: #10b981; }
+        .inv-btn-add:hover { background: #bbf7d0; }
+        .inv-btn-remove { background: #fef3c7; color: #b45309; }
+        .inv-btn-remove:hover { background: #fde68a; }
+        .inv-btn-edit { background: #dbeafe; color: #2563eb; }
+        .inv-btn-edit:hover { background: #bfdbfe; }
+        .inv-btn-delete { background: #fee2e2; color: #ef4444; }
+        .inv-btn-delete:hover { background: #fecaca; }
+        .inv-empty { text-align: center; color: #999; padding: 22px; background: white; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13.5px; }
+
+        /* ===== YANGI BUYURTMA (QAYTA DIZAYN) ===== */
+        .order-card { background: white; padding: 18px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .order-card h4 { font-size: 14.5px; color: #0f172a; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; font-weight: 800; }
+        .order-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .order-card-grid input, .order-card-grid select, .order-card-grid textarea {
+            padding: 11px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 100%; background: #fafbfc;
+            transition: border-color 0.15s ease;
+        }
+        .order-card-grid input:focus, .order-card-grid select:focus, .order-card-grid textarea:focus { outline: none; border-color: #2563eb; background: white; }
+        .order-card-grid textarea { grid-column: span 3; resize: vertical; height: 60px; }
+        .order-field-label { grid-column: span 3; font-size: 11.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin: 4px 0 -6px; }
+        .model-search-wrap { position: relative; grid-column: span 3; }
+        .model-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid #e2e8f0;
+            border-radius: 10px; margin-top: 6px; max-height: 260px; overflow-y: auto; z-index: 80; box-shadow: 0 12px 28px rgba(15,23,42,0.18);
+        }
+        .model-dropdown-item { padding: 11px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .model-dropdown-item:last-child { border-bottom: none; }
+        .model-dropdown-item:hover { background: #f0f9ff; }
+        .model-dropdown-item.disabled { opacity: 0.4; cursor: not-allowed; }
+        .model-dropdown-item .mdi-name { font-weight: 700; font-size: 14px; color: #0f172a; }
+        .model-dropdown-item .mdi-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .model-dropdown-item .mdi-price { font-size: 12.5px; color: #10b981; font-weight: 700; float: right; }
+        .model-dropdown-empty { padding: 16px; text-align: center; color: #999; font-size: 13px; }
+        .order-item-card { display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 11px 13px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid #10b981; }
+        .order-item-card .oi-num { background: #10b981; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+        .order-item-card .oi-info { flex: 1; min-width: 0; }
+        .order-item-card .oi-name { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+        .order-item-card .oi-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .order-item-card .oi-price { font-size: 12.5px; font-weight: 800; color: #2563eb; white-space: nowrap; }
+        .order-item-card .oi-remove { flex-shrink: 0; background: #fee2e2; color: #ef4444; border: none; border-radius: 6px; width: 26px; height: 26px; font-weight: 800; cursor: pointer; }
+        .btn-add-item { grid-column: span 3; padding: 13px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s ease; }
+        .btn-add-item:hover { background: #059669; }
+        .btn-save-order { width: 100%; padding: 16px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 15.5px; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .btn-save-order:hover { background: #1d4ed8; }
+
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f8fafc; }
+        
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; }
+        .stat-card .label { font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+        .stat-card .value { font-size: 20px; font-weight: bold; color: #0f172a; }
+        .stat-card.income { border-left-color: #10b981; }
+        .stat-card.expense { border-left-color: #ef4444; }
+        .stat-card.profit { border-left-color: #f59e0b; }
+        .period-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+        .period-bar label { font-size: 12px; color: #64748b; display: block; margin-bottom: 4px; }
+        .period-bar input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .period-bar button { padding: 9px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .expense-form { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; }
+        .expense-form input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; }
+        .expense-form button { padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+        /* ===== MIJOZ KARTOCHKALARI ===== */
+        .cust-search-bar { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 15px; margin-bottom: 5px; }
+        .cust-search-bar input {
+            width: 100%; padding: 12px 14px; border: 1px solid #ccc; border-radius: 8px;
+            font-size: 15px; margin-bottom: 12px;
+        }
+        .cust-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .cf-btn {
+            padding: 8px 14px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569;
+            border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.15s ease;
+        }
+        .cf-btn:hover { background: #eef2f7; }
+        .cf-btn.active { background: #2563eb; border-color: #2563eb; color: white; }
+
+        .cc-badge.install-yes { background: #dbeafe; color: #1d4ed8; }
+        .cc-badge.install-no { background: #ffedd5; color: #c2410c; }
+        .cc-badges { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .cc-btn-install { background: #3b82f6; color: white; }
+        .cc-btn-install.done { background: #94a3b8; }
+
+        .customer-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 15px; }
+        .customer-card {
+            background: white; border-radius: 12px; border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(15,23,42,0.06); overflow: hidden;
+            display: flex; flex-direction: column; transition: box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        .customer-card:hover { box-shadow: 0 6px 18px rgba(15,23,42,0.10); }
+        .customer-card.paid { border-left: 4px solid #10b981; }
+        .customer-card.has-debt { border-left: 4px solid #ef4444; }
+        .cc-head {
+            padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-start;
+            background: #f8fafc; border-bottom: 1px solid #e2e8f0; gap: 10px;
+        }
+        .cc-name { font-size: 16px; font-weight: 800; color: #0f172a; }
+        .cc-phone { font-size: 13px; color: #64748b; margin-top: 2px; }
+        .cc-badge {
+            font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .cc-badge.paid { background: #dcfce7; color: #15803d; }
+        .cc-badge.debt { background: #fee2e2; color: #b91c1c; }
+        .cc-body { padding: 14px 16px; flex: 1; }
+        .cc-row { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 5px 0; border-bottom: 1px dashed #f1f5f9; }
+        .cc-row:last-child { border-bottom: none; }
+        .cc-row .cc-label { color: #64748b; }
+        .cc-row .cc-value { font-weight: 700; color: #0f172a; text-align: right; }
+        .cc-row .cc-value.money-debt { color: #ef4444; }
+        .cc-row .cc-value.money-paid { color: #10b981; }
+        .cc-note { font-size: 12.5px; color: #94a3b8; margin-top: 8px; font-style: italic; }
+        .cc-history { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+        .cc-history-title { font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+        .cc-history-item { font-size: 12.5px; color: #475569; display: flex; justify-content: space-between; padding: 2px 0; }
+        .cc-actions { display: flex; gap: 8px; padding: 12px 16px; background: #fbfcfe; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
+        .cc-actions button {
+            flex: 1; min-width: 90px; padding: 9px 10px; border: none; border-radius: 6px;
+            font-weight: 700; font-size: 12.5px; cursor: pointer; transition: opacity 0.15s ease;
+        }
+        .cc-actions button:hover { opacity: 0.88; }
+        .cc-btn-receipt { background: #10b981; color: white; }
+        .cc-btn-pay { background: #f59e0b; color: white; }
+        .cc-btn-delete { background: #ef4444; color: white; flex: 0 0 42px; min-width: 42px; }
+
+        /* ===== QARZ TO'LASH MODALI ===== */
+        #debt-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 99998;
+        }
+        #debt-box { background: #fff; border-radius: 12px; padding: 22px; width: 340px; max-width: 92%; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+        #debt-box h3 { font-size: 17px; margin-bottom: 4px; color: #0f172a; }
+        #debt-box .debt-sub { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+        #debt-box .debt-current { background: #fef2f2; color:
