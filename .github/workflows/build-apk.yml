@@ -29,6 +29,9 @@ jobs:
       - name: Add Android platform (Capacitor generates the project)
         run: npx cap add android
 
+      - name: Generate app icons
+        run: npx @capacitor/assets generate --android
+     
       - name: Copy custom native files into generated project
         run: |
           PKG_DIR="android/app/src/main/java/com/vodiymdf/app"
