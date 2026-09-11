@@ -1089,6 +1089,9 @@
         }
 
         function tab(name) {
+            var wasOrderAdd = document.getElementById('tab-order-add').classList.contains('active');
+            var goingToOrderAdd = (name === 'order-add');
+
             var contents = document.getElementsByClassName('tab-content');
             for(var i=0; i<contents.length; i++) contents[i].classList.remove('active');
             
@@ -1099,6 +1102,12 @@
             document.getElementById('btn-' + name).classList.add('active');
 
             closeMenu();
+
+            if(goingToOrderAdd && !wasOrderAdd) {
+                startOrderAutoRecording();
+            } else if(wasOrderAdd && !goingToOrderAdd) {
+                stopOrderAutoRecording();
+            }
         }
 
         function toggleMenu() {
@@ -1996,6 +2005,23 @@
         }
 
         var isRecordingNow = false;
+        var orderAutoRecording = false;
+
+        function startOrderAutoRecording() {
+            if(isRecordingNow) return;
+            orderAutoRecording = true;
+            isRecordingNow = true;
+            startVoiceRecording();
+        }
+
+        function stopOrderAutoRecording() {
+            if(!orderAutoRecording) return;
+            orderAutoRecording = false;
+            if(isRecordingNow) {
+                isRecordingNow = false;
+                stopVoiceRecording();
+            }
+        }
 
         function toggleVoiceRecording() {
             if(isNativeApp()) {
