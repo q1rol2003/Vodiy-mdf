@@ -358,6 +358,7 @@
             <div class="receipt-actions">
                 <button class="btn-close" onclick="closeReceipt()">Yopish</button>
                 <button class="btn-print" onclick="doPrintReceipt()">🖨️ Chop etish</button>
+                <button class="btn-rawbt" onclick="printReceiptRawBT()" style="background:#f59e0b; color:#fff;">🖨️ RawBT</button>
             </div>
         </div>
     </div>
@@ -381,6 +382,46 @@
             <div class="debt-actions">
                 <button class="btn-pay-cancel" onclick="closeDebtModal()">Bekor qilish</button>
                 <button class="btn-pay-confirm" onclick="confirmDebtPayment()">✅ Tasdiqlash</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUYURTMANI TO'LIQ TAHRIRLASH OYNASI -->
+    <div id="edit-order-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 99998;">
+        <div style="background: #fff; border-radius: 12px; padding: 20px; width: 420px; max-width: 94%; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <h3 style="font-size: 17px; margin-bottom: 14px; color: #0f172a;">✏️ Buyurtmani tahrirlash</h3>
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Mijoz ismi</label>
+            <input type="text" id="eo-client" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Telefon raqami</label>
+            <input type="text" id="eo-phone" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Manzil</label>
+            <input type="text" id="eo-address" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <div id="eo-items-wrap"></div>
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px; margin-top:6px;">Mahsulotlar jami narxi (chegirmasiz, so'm)</label>
+            <input type="number" id="eo-price" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Chegirma (so'm)</label>
+            <input type="number" id="eo-discount" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Avans / to'langan (so'm)</label>
+            <input type="number" id="eo-avans" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Muddat</label>
+            <input type="date" id="eo-deadline" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Eslatma</label>
+            <textarea id="eo-note" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:14px; height:60px; resize:vertical;"></textarea>
+
+            <p id="eo-debt-preview" style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:14px;"></p>
+
+            <div style="display:flex; gap:8px;">
+                <button onclick="closeEditOrderModal()" style="flex:1; padding:12px; background:#e2e8f0; color:#0f172a; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Bekor qilish</button>
+                <button onclick="saveEditedOrder()" style="flex:1; padding:12px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">✅ Saqlash</button>
             </div>
         </div>
     </div>
@@ -584,6 +625,7 @@
                     <h4>💰 To'lov va muddat</h4>
                     <div class="order-card-grid">
                         <input type="number" id="p-price" placeholder="Jami narx (avtomatik)" readonly style="background: #eef2f7; font-weight: bold;">
+                        <input type="number" id="p-final-total" placeholder="Qancha so'mga sotyapsiz (yakuniy)" oninput="calcFromFinal()" style="border-color:#2563eb;">
                         <input type="number" id="p-discount" placeholder="Chegirma (so'm)" value="0" oninput="calc()">
 
                         <p id="p-after-discount" style="grid-column: span 3; font-size: 13px; color: #64748b; font-weight: bold; margin: -6px 0 0 2px;"></p>
@@ -1799,6 +1841,12 @@
             var avans = Number(document.getElementById('p-avans').value) || 0;
 
             var afterDiscount = price - disc;
+
+            var finalBox = document.getElementById('p-final-total');
+            if(document.activeElement !== finalBox) {
+                finalBox.value = afterDiscount || '';
+            }
+
             var afterDiscBox = document.getElementById('p-after-discount');
             if(disc > 0) {
                 afterDiscBox.style.display = 'block';
@@ -1811,6 +1859,18 @@
             var debt = afterDiscount - avans;
             document.getElementById('p-debt').value = debt > 0 ? fmt(debt) + " so'm qarz" : "Qarzsiz";
             if(document.getElementById('p-paytype').value === 'aralash') calcSplit();
+        }
+
+        function calcFromFinal() {
+            var price = orderItems.reduce(function(s, it){ return s + it.price; }, 0);
+            var final = Number(document.getElementById('p-final-total').value);
+            if(isNaN(final)) final = price;
+            if(final < 0) final = 0;
+            if(final > price) final = price;
+
+            var disc = price - final;
+            document.getElementById('p-discount').value = disc;
+            calc();
         }
 
         function saveFullOrder() {
@@ -1960,6 +2020,7 @@
             document.getElementById('e-open').value = '';
             document.getElementById('e-unit-price').value = '';
             document.getElementById('p-price').value = '';
+            document.getElementById('p-final-total').value = '';
             document.getElementById('p-discount').value = '0';
             document.getElementById('p-avans').value = '0';
             document.getElementById('p-debt').value = '';
@@ -2407,7 +2468,8 @@
                         <div class="cc-row"><span class="cc-label">📍 Manzil</span><span class="cc-value">${o.address}</span></div>
                         ${itemsRowsHTML}
                         ${accRowsHTML}
-                        <div class="cc-row"><span class="cc-label">💰 Jami summa</span><span class="cc-value">${fmt(o.price)} so'm</span></div>
+                        <div class="cc-row"><span class="cc-label">💰 Jami summa</span><span class="cc-value">${fmt(o.price)} so'm${o.discount > 0 ? ' <span style="color:#f59e0b; font-weight:700;">(chegirma: -' + fmt(o.discount) + ")</span>" : ''} <span onclick="openEditOrderModal(${o.id})" style="cursor:pointer; margin-left:2px;" title="Buyurtmani tahrirlash">✏️</span></span></div>
+                        ${o.discount > 0 ? '<div class="cc-row"><span class="cc-label">🤝 Kelishilgan yakuniy</span><span class="cc-value" style="color:#2563eb;">' + fmt(o.price - o.discount) + " so'm</span></div>" : ''}
                         <div class="cc-row"><span class="cc-label">✅ To'langan</span><span class="cc-value money-paid">${fmt(paidAmount(o))} so'm</span></div>
                         <div class="cc-row"><span class="cc-label">❗ Qarz</span><span class="cc-value ${hasDebt ? 'money-debt' : 'money-paid'}">${fmt(o.debt)} so'm</span></div>
                         <div class="cc-row"><span class="cc-label">📅 Muddat</span><span class="cc-value">${o.deadline || '-'}</span></div>
@@ -2418,11 +2480,142 @@
                         <button class="cc-btn-receipt" onclick="printReceipt(${o.id})">🖨️ Chek</button>
                         ${hasDebt ? '<button class="cc-btn-pay" onclick="openDebtModal(' + o.id + ')">💰 Qarz to\'lash</button>' : ''}
                         <button class="cc-btn-install ${installed ? 'done' : ''}" onclick="toggleInstalled(${o.id})">${installed ? '↩️ Bekor qilish' : '🔧 O\'rnatildi'}</button>
+                        <button onclick="openEditOrderModal(${o.id})" style="background:#dbeafe; color:#2563eb;">✏️ Tahrirlash</button>
                         <button class="cc-btn-delete" onclick="deleteOrder(${o.id})">🗑️</button>
                     </div>
                 `;
                 wrap.appendChild(card);
             });
+        }
+
+        var editOrderModalId = null;
+
+        function renderEditOrderItems(o) {
+            var wrap = document.getElementById('eo-items-wrap');
+            if(o.items && o.items.length > 0) {
+                wrap.innerHTML = '<label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:6px;">Mahsulotlar</label>' +
+                    o.items.map(function(it, idx) {
+                        return '<div style="background:#f8fafc; border-radius:8px; padding:10px; margin-bottom:8px;">' +
+                            '<input type="text" data-idx="' + idx + '" class="eo-it-name" value="' + (it.name || '').replace(/"/g,'&quot;') + '" placeholder="Nomi" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:13.5px; margin-bottom:6px;">' +
+                            '<div style="display:flex; gap:6px;">' +
+                                '<input type="text" data-idx="' + idx + '" class="eo-it-size" value="' + (it.size || '').replace(/"/g,'&quot;') + '" placeholder="Razmer" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:13px;">' +
+                                '<input type="text" data-idx="' + idx + '" class="eo-it-open" value="' + (it.openType || '').replace(/"/g,'&quot;') + '" placeholder="Ochilishi" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:13px;">' +
+                            '</div>' +
+                            '<div style="display:flex; gap:6px; margin-top:6px;">' +
+                                '<input type="number" data-idx="' + idx + '" class="eo-it-qty" value="' + (it.qty || 1) + '" placeholder="Soni" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:13px;">' +
+                                '<input type="number" data-idx="' + idx + '" class="eo-it-price" value="' + (it.price || 0) + '" placeholder="Narxi (jami)" style="flex:1.4; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:13px;">' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+            } else {
+                wrap.innerHTML =
+                    '<label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Mahsulot nomi</label>' +
+                    '<input type="text" id="eo-legacy-doorname" value="' + (o.doorName || '').replace(/"/g,'&quot;') + '" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">' +
+                    '<label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Razmer</label>' +
+                    '<input type="text" id="eo-legacy-size" value="' + (o.size || '').replace(/"/g,'&quot;') + '" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">' +
+                    '<label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Ochilishi</label>' +
+                    '<input type="text" id="eo-legacy-open" value="' + (o.openType || '').replace(/"/g,'&quot;') + '" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">' +
+                    '<label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Soni</label>' +
+                    '<input type="number" id="eo-legacy-qty" value="' + (o.qty || 1) + '" style="width:100%; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:14.5px; margin-bottom:10px;">';
+            }
+        }
+
+        function openEditOrderModal(id) {
+            var o = orders.find(function(x){ return x.id === id; });
+            if(!o) return;
+            editOrderModalId = id;
+
+            document.getElementById('eo-client').value = o.client || '';
+            document.getElementById('eo-phone').value = o.phone || '';
+            document.getElementById('eo-address').value = o.address || '';
+            document.getElementById('eo-price').value = o.price || 0;
+            document.getElementById('eo-discount').value = o.discount || 0;
+            document.getElementById('eo-avans').value = o.avans || 0;
+            document.getElementById('eo-deadline').value = o.deadline || '';
+            document.getElementById('eo-note').value = (o.note && o.note !== '-') ? o.note : '';
+
+            renderEditOrderItems(o);
+            updateEditOrderDebtPreview();
+
+            document.getElementById('eo-price').oninput = updateEditOrderDebtPreview;
+            document.getElementById('eo-discount').oninput = updateEditOrderDebtPreview;
+            document.getElementById('eo-avans').oninput = updateEditOrderDebtPreview;
+
+            document.getElementById('edit-order-modal').style.display = 'flex';
+        }
+
+        function updateEditOrderDebtPreview() {
+            var price = Number(document.getElementById('eo-price').value) || 0;
+            var discount = Number(document.getElementById('eo-discount').value) || 0;
+            var avans = Number(document.getElementById('eo-avans').value) || 0;
+            var debt = (price - discount) - avans;
+            document.getElementById('eo-debt-preview').innerText =
+                'Yakuniy: ' + fmt(price - discount) + " so'm  ·  Qarz: " + fmt(debt < 0 ? 0 : debt) + " so'm" +
+                (debt < 0 ? '  ⚠️ ortiqcha to\'langan' : '');
+        }
+
+        function closeEditOrderModal() {
+            document.getElementById('edit-order-modal').style.display = 'none';
+            editOrderModalId = null;
+        }
+
+        function saveEditedOrder() {
+            var o = orders.find(function(x){ return x.id === editOrderModalId; });
+            if(!o) return;
+
+            var client = document.getElementById('eo-client').value.trim();
+            var phone = document.getElementById('eo-phone').value.trim();
+            if(!client) return alert("Mijoz ismini kiriting!");
+            if(!phone) return alert("Telefon raqamini kiriting!");
+
+            o.client = client;
+            o.phone = phone;
+            o.address = document.getElementById('eo-address').value.trim() || '-';
+            o.deadline = document.getElementById('eo-deadline').value;
+            o.note = document.getElementById('eo-note').value.trim() || '-';
+
+            var price = Number(document.getElementById('eo-price').value);
+            var discount = Number(document.getElementById('eo-discount').value);
+            var avans = Number(document.getElementById('eo-avans').value);
+            if(isNaN(price) || price < 0) return alert("Jami narxni to'g'ri kiriting!");
+            if(isNaN(discount) || discount < 0) return alert("Chegirmani to'g'ri kiriting!");
+            if(discount > price) return alert("Chegirma jami narxdan katta bo'lishi mumkin emas!");
+            if(isNaN(avans) || avans < 0) return alert("Avansni to'g'ri kiriting!");
+
+            o.price = price;
+            o.discount = discount;
+            o.avans = avans;
+            var newDebt = (price - discount) - avans;
+            o.debt = newDebt < 0 ? 0 : newDebt;
+
+            if(o.items && o.items.length > 0) {
+                var names = document.querySelectorAll('.eo-it-name');
+                var sizes = document.querySelectorAll('.eo-it-size');
+                var opens = document.querySelectorAll('.eo-it-open');
+                var qtys = document.querySelectorAll('.eo-it-qty');
+                var prices = document.querySelectorAll('.eo-it-price');
+                o.items.forEach(function(it, idx) {
+                    it.name = names[idx].value.trim() || it.name;
+                    it.size = sizes[idx].value.trim();
+                    it.openType = opens[idx].value.trim();
+                    it.qty = Number(qtys[idx].value) || it.qty;
+                    it.price = Number(prices[idx].value) || it.price;
+                });
+                o.doorName = o.items.map(function(it){ return it.name + ' (' + it.qty + 'ta)'; }).join(', ');
+                o.qty = o.items.reduce(function(s, it){ return s + (it.qty || 0); }, 0);
+                o.size = o.items.map(function(it){ return it.size; }).join(', ');
+                o.openType = o.items.map(function(it){ return it.openType; }).join(', ');
+            } else {
+                o.doorName = document.getElementById('eo-legacy-doorname').value.trim() || o.doorName;
+                o.size = document.getElementById('eo-legacy-size').value.trim();
+                o.openType = document.getElementById('eo-legacy-open').value.trim();
+                o.qty = Number(document.getElementById('eo-legacy-qty').value) || o.qty;
+            }
+
+            persistAll();
+            renderCustomers();
+            closeEditOrderModal();
+            alert('✅ Buyurtma yangilandi!');
         }
 
         var debtModalOrderId = null;
@@ -2646,6 +2839,28 @@
         };
         document.head.appendChild(s);
     })();
+    </script>
+
+    <!-- ===== RAWBT ORQALI CHOP ETISH ===== -->
+    <script>
+    function printReceiptRawBT() {
+        try {
+            var element = document.getElementById('print-target');
+            if (!element) { alert('Chek topilmadi!'); return; }
+
+            var text = (element.innerText || element.textContent || '').replace(/\n{3,}/g, '\n\n');
+
+            var ESC = '\x1B';
+            var GS = '\x1D';
+            // Printerni ishga tushirish + matn + oxirida joy qoldirish + qog'ozni kesish
+            var data = ESC + '@' + text + '\n\n\n\n' + GS + 'V' + '\x01';
+
+            var encoded = btoa(unescape(encodeURIComponent(data)));
+            window.location.href = 'rawbt:base64,' + encoded;
+        } catch (e) {
+            alert('❌ RawBT orqali chop etishda xatolik: ' + e.message + '\n\nRawBT ilovasi telefoningizda o\'rnatilganligini tekshiring.');
+        }
+    }
     </script>
 </body>
 </html>
