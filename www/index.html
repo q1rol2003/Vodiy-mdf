@@ -958,6 +958,13 @@
             return (neg ? '-' : '') + s;
         }
 
+        function formatOrderTimestamp(id) {
+            var d = new Date(id);
+            if(isNaN(d.getTime())) return '';
+            var pad = function(x){ return String(x).padStart(2, '0'); };
+            return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + '  ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
         // --- TELEGRAM MINI APP ---
         if (window.Telegram && window.Telegram.WebApp) {
             Telegram.WebApp.ready();
@@ -2098,6 +2105,10 @@
         }
 
         function startVoiceRecording() {
+            if(!tgSettings.token || !tgSettings.chatId) {
+                var proceed = confirm("⚠️ Diqqat: Telegram sozlanmagan!\n\nOvoz yozuvi faqat shu qurilmada, vaqtinchalik saqlanadi va ilova qayta ochilganda yo'qolishi mumkin.\n\nYozuvlarni doimiy saqlash va boshqa qurilmada ko'rish uchun '⚙️ Telegram Sozlamalari' bo'limida Bot Token va Chat ID kiriting.\n\nBaribir yozishni boshlashni xohlaysizmi?");
+                if(!proceed) return;
+            }
             if(isNativeApp()) {
                 window.Capacitor.Plugins.MicRecorder.start().then(function() {
                     voiceStartTs = Date.now();
@@ -2144,7 +2155,7 @@
                         voiceStream.getTracks().forEach(function(t){ t.stop(); });
                         voiceStream = null;
                     }
-                    if(tgSettings.enabled && tgSettings.token && tgSettings.chatId) {
+                    if(tgSettings.token && tgSettings.chatId) {
                         sendVoiceToTelegram(rec);
                     }
                 };
@@ -2202,7 +2213,7 @@
                             var rec = { id: Date.now(), name: name, url: url, blob: blob, date: new Date().toLocaleString(), sentToTg: false, sendingToTg: false };
                             voiceRecordings.unshift(rec);
                             renderVoiceList();
-                            if(tgSettings.enabled && tgSettings.token && tgSettings.chatId) {
+                            if(tgSettings.token && tgSettings.chatId) {
                                 sendVoiceToTelegram(rec);
                             }
                         }).catch(function(err) {
@@ -2256,7 +2267,7 @@
         function sendVoiceToTelegram(recording) {
             if(!recording) return;
             if(!tgSettings.token || !tgSettings.chatId) {
-                alert("Avval '⚙️ Telegram Sozlamalari' bo'limida Bot Token va Chat ID kiriting hamda bildirishnomalarni yoqing!");
+                alert("Avval '⚙️ Telegram Sozlamalari' bo'limida Bot Token va Chat ID kiriting!");
                 return;
             }
             recording.sendingToTg = true;
@@ -2462,6 +2473,7 @@
                         <div class="cc-badges">
                             <div class="cc-badge ${hasDebt ? 'debt' : 'paid'}">${hasDebt ? '❗ Qarzdor' : '✅ To\'liq to\'langan'}</div>
                             <div class="cc-badge ${installed ? 'install-yes' : 'install-no'}">${installed ? '🔧 O\'rnatilgan' : '🚪 O\'rnatilmagan'}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-weight:600; margin-top:2px;">🕒 ${formatOrderTimestamp(o.id)}</div>
                         </div>
                     </div>
                     <div class="cc-body">
