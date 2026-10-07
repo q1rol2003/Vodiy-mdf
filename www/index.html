@@ -511,7 +511,24 @@
             <div id="tab-cashbox" class="tab-content">
                 <h2>💰 Kassadagi pul</h2>
 
-                <div class="stat-cards" id="stat-cards"></div>
+                <div id="today-hero" style="background:linear-gradient(135deg,#2563eb,#1d4ed8); border-radius:14px; padding:24px 18px; margin-bottom:14px; color:#fff; text-align:center; box-shadow:0 6px 20px rgba(37,99,235,0.35);">
+                    <div style="font-size:13px; opacity:0.85; font-weight:700; letter-spacing:0.5px;">📅 BUGUNGI KASSA</div>
+                    <div id="today-kassa-big" style="font-size:36px; font-weight:900; margin:6px 0; line-height:1.1;">0 so'm</div>
+                    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+                        <div id="today-naqd-big" style="font-size:16px; opacity:0.92; font-weight:700;">💵 Naqd: 0 so'm</div>
+                        <div id="today-terminal-big" style="font-size:16px; opacity:0.92; font-weight:700;">💳 Karta: 0 so'm</div>
+                    </div>
+                </div>
+
+                <div class="order-card">
+                    <h4>➕ Kirim qo'shish</h4>
+                    <div class="expense-form">
+                        <input type="text" id="inc-note" placeholder="Kirim izohi (Masalan: Qo'shimcha kirim, Qarz qaytdi)">
+                        <input type="number" id="inc-amount" placeholder="Summa (so'm)">
+                        <input type="date" id="inc-date">
+                        <button onclick="addIncome()" style="background:#10b981;">➕ Kirim qo'shish</button>
+                    </div>
+                </div>
 
                 <div class="order-card">
                     <h4>➖ Chiqim qo'shish</h4>
@@ -541,7 +558,7 @@
                 </div>
 
                 <div class="order-card">
-                    <h4>📋 Chiqimlar tarixi</h4>
+                    <h4>📋 Kirim-chiqim tarixi</h4>
                     <table>
                         <thead><tr><th>Sana</th><th>Izoh</th><th>Summa</th><th>Amal</th></tr></thead>
                         <tbody id="exp-table"></tbody>
@@ -773,6 +790,33 @@
                     </div>
                     <div id="payroll-list"><p style="color:#999; font-size:13px;">Hali qayd yo'q</p></div>
                 </div>
+
+                <div class="order-card" style="border-left:4px solid #7c3aed;">
+                    <h4>🧍 Mening shaxsiy pul hisobim</h4>
+                    <p style="font-size:12.5px; color:#94a3b8; margin:-8px 0 14px;">Bu yerga yozgan summalar <b>faqat shaxsiy hisobingiz</b> uchun — kassadagi pulga hech qanday ta'sir qilmaydi (na qo'shiladi, na ayiriladi).</p>
+                    <div class="order-card-grid">
+                        <input type="date" id="pl-date">
+                        <select id="pl-type">
+                            <option value="income">➕ Men ishladim (kirim)</option>
+                            <option value="expense">➖ Men ishlatdim (chiqim)</option>
+                        </select>
+                        <input type="number" id="pl-amount" placeholder="Summa (so'm)">
+                        <textarea id="pl-note" placeholder="Izoh (ixtiyoriy, masalan: tashqi buyurtma, shaxsiy xarajat)"></textarea>
+                        <button type="button" class="btn-add-item" onclick="addPersonalRecord()">➕ Qo'shish</button>
+                    </div>
+                </div>
+
+                <div class="order-card">
+                    <h4>📊 Oylik shaxsiy hisobot</h4>
+                    <div class="period-bar" style="margin-bottom:0;">
+                        <div>
+                            <label>Oy</label>
+                            <input type="month" id="pl-month" oninput="renderPersonalLedger()">
+                        </div>
+                    </div>
+                    <div class="stat-cards" style="margin-top:14px;" id="pl-stat-cards"></div>
+                    <div id="personal-ledger-list" style="margin-top:10px;"><p style="color:#999; font-size:13px;">Hali qayd yo'q</p></div>
+                </div>
             </div>
         </div>
     </div>
@@ -828,6 +872,8 @@
         var orders = JSON.parse(localStorage.getItem('vodiy_mdf_orders')) || [];
         var expenses = JSON.parse(localStorage.getItem('vodiy_mdf_expenses')) || [];
         var payrollRecords = JSON.parse(localStorage.getItem('vodiy_mdf_payroll')) || [];
+        var personalLedger = JSON.parse(localStorage.getItem('vodiy_mdf_personal')) || [];
+        var incomes = JSON.parse(localStorage.getItem('vodiy_mdf_incomes')) || [];
         var tgSettings = JSON.parse(localStorage.getItem('vodiy_mdf_tg')) || { token: '', chatId: '', enabled: false };
         var appPassword = localStorage.getItem('vodiy_mdf_pass') || "1234";
         var cart = [];
@@ -868,6 +914,8 @@
             localStorage.setItem('vodiy_mdf_orders', JSON.stringify(orders));
             localStorage.setItem('vodiy_mdf_expenses', JSON.stringify(expenses));
             localStorage.setItem('vodiy_mdf_payroll', JSON.stringify(payrollRecords));
+            localStorage.setItem('vodiy_mdf_personal', JSON.stringify(personalLedger));
+            localStorage.setItem('vodiy_mdf_incomes', JSON.stringify(incomes));
             localStorage.setItem('vodiy_mdf_tg', JSON.stringify(tgSettings));
             localStorage.setItem('vodiy_mdf_pass', appPassword);
             scheduleSync();
@@ -882,7 +930,7 @@
         function syncToFirebase() {
             var ts = Date.now();
             lastLocalWriteTs = ts;
-            dataRef.set({ doors: doors, accessories: accessories, orders: orders, expenses: expenses, payrollRecords: payrollRecords, tgSettings: tgSettings, appPassword: appPassword, updatedAt: ts })
+            dataRef.set({ doors: doors, accessories: accessories, orders: orders, expenses: expenses, payrollRecords: payrollRecords, personalLedger: personalLedger, incomes: incomes, tgSettings: tgSettings, appPassword: appPassword, updatedAt: ts })
                 .then(function() {
                     updateSyncStatus('✅ Sinxronlangan: ' + new Date().toLocaleTimeString());
                 })
@@ -899,6 +947,8 @@
                 orders = data.orders || orders;
                 expenses = data.expenses || expenses;
                 payrollRecords = data.payrollRecords || payrollRecords;
+                personalLedger = data.personalLedger || personalLedger;
+                incomes = data.incomes || incomes;
                 if (data.tgSettings) tgSettings = data.tgSettings;
                 if (data.appPassword) appPassword = data.appPassword;
                 localStorage.setItem('mdf_doors', JSON.stringify(doors));
@@ -906,6 +956,8 @@
                 localStorage.setItem('vodiy_mdf_orders', JSON.stringify(orders));
                 localStorage.setItem('vodiy_mdf_expenses', JSON.stringify(expenses));
                 localStorage.setItem('vodiy_mdf_payroll', JSON.stringify(payrollRecords));
+                localStorage.setItem('vodiy_mdf_personal', JSON.stringify(personalLedger));
+                localStorage.setItem('vodiy_mdf_incomes', JSON.stringify(incomes));
                 localStorage.setItem('vodiy_mdf_tg', JSON.stringify(tgSettings));
                 localStorage.setItem('vodiy_mdf_pass', appPassword);
             }
@@ -919,6 +971,7 @@
             renderOrderModels();
             renderFinance();
             renderPayroll();
+            renderPersonalLedger();
             loadTgSettings();
         }
 
@@ -1010,6 +1063,7 @@
             var dd = String(d.getDate()).padStart(2, '0');
             document.getElementById('p-deadline').value = yyyy + '-' + mm + '-' + dd;
             document.getElementById('exp-date').value = yyyy + '-' + mm + '-' + dd;
+            document.getElementById('inc-date').value = yyyy + '-' + mm + '-' + dd;
             setToday();
 
             document.getElementById('sync-loading').style.display = 'flex';
@@ -1069,71 +1123,107 @@
             renderFinance();
         }
 
+        function addIncome() {
+            var note = document.getElementById('inc-note').value;
+            var amount = Number(document.getElementById('inc-amount').value);
+            var date = document.getElementById('inc-date').value || todayStr();
+
+            if(!note || !amount) return alert('Izoh va summani kiriting!');
+
+            incomes.unshift({ id: Date.now(), note: note, amount: amount, date: date });
+            persistAll();
+
+            document.getElementById('inc-note').value = '';
+            document.getElementById('inc-amount').value = '';
+
+            renderFinance();
+        }
+
+        function delIncome(id) {
+            if(!confirm("Kirimni o'chirmoqchimisiz?")) return;
+            incomes = incomes.filter(function(x){ return x.id !== id; });
+            persistAll();
+            renderFinance();
+        }
+
         function searchPeriod() {
             var from = document.getElementById('period-from').value;
             var to = document.getElementById('period-to').value;
             if(!from || !to) return alert("Davr boshi va oxirini tanlang!");
 
             var periodOrders = orders.filter(function(o){ return o.date >= from && o.date <= to; });
+            var periodIncomes = incomes.filter(function(e){ return e.date >= from && e.date <= to; });
             var periodExpenses = expenses.filter(function(e){ return e.date >= from && e.date <= to; });
             var periodPayroll = payrollRecords.filter(function(r){ return r.date >= from && r.date <= to; });
 
-            var naqd = periodOrders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
+            var naqdRaw = periodOrders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
             var terminal = periodOrders.reduce(function(s,o){ return s+terminalPartOf(o); }, 0);
+            var qoshimchaKirim = periodIncomes.reduce(function(s,e){ return s+e.amount; }, 0);
             var chiqim = periodExpenses.reduce(function(s,e){ return s+e.amount; }, 0);
             var ishHaqi = periodPayroll.reduce(function(s,r){ return s+r.amount; }, 0);
-            var kassa = naqd + terminal - chiqim - ishHaqi;
+
+            var naqd = Math.max(0, naqdRaw + qoshimchaKirim - chiqim - ishHaqi);
+            var umumiyKassa = naqd + terminal;
 
             var box = document.getElementById('period-result');
             box.style.display = 'block';
             box.innerHTML =
-                '<div style="background:#f8fafc; border-radius:6px; padding:12px; display:flex; gap:20px; flex-wrap:wrap;">' +
-                '<span>💵 Naqd: <b>'+fmt(naqd)+' so\'m</b></span>' +
-                '<span>💳 Terminal: <b>'+fmt(terminal)+' so\'m</b></span>' +
-                '<span>💸 Chiqim: <b style="color:#ef4444;">'+fmt(chiqim)+' so\'m</b></span>' +
-                '<span>🧑‍🔧 Ish haqi: <b style="color:#ef4444;">'+fmt(ishHaqi)+' so\'m</b></span>' +
-                '<span>📈 Sof kassa: <b style="color:#f59e0b;">'+fmt(kassa)+' so\'m</b></span>' +
+                '<div class="stat-cards" style="margin-top:4px; margin-bottom:0;">' +
+                '<div class="stat-card profit"><div class="label">📊 Umumiy kassa</div><div class="value">'+fmt(umumiyKassa)+" so'm</div></div>" +
+                '<div class="stat-card"><div class="label">💵 Naqd kassa</div><div class="value">'+fmt(naqd)+" so'm</div></div>" +
+                '<div class="stat-card"><div class="label">💳 Terminal kassa</div><div class="value">'+fmt(terminal)+" so'm</div></div>" +
+                '<div class="stat-card income"><div class="label">➕ Qo\'shimcha kirim</div><div class="value">'+fmt(qoshimchaKirim)+" so'm</div></div>" +
+                '<div class="stat-card expense"><div class="label">💸 Chiqimlar</div><div class="value">'+fmt(chiqim)+" so'm</div></div>" +
+                '<div class="stat-card expense"><div class="label">🧑‍🔧 Ish haqi</div><div class="value">'+fmt(ishHaqi)+" so'm</div></div>" +
                 '</div>';
         }
 
         function renderFinance() {
             var today = todayStr();
 
-            var totalIncome = orders.reduce(function(s,o){ return s + paidAmount(o); }, 0);
+            var totalOrdersIncome = orders.reduce(function(s,o){ return s + paidAmount(o); }, 0);
+            var totalManualIncome = incomes.reduce(function(s,e){ return s + e.amount; }, 0);
+            var totalIncome = totalOrdersIncome + totalManualIncome;
             var totalExpense = expenses.reduce(function(s,e){ return s + e.amount; }, 0);
             var totalPayroll = payrollRecords.reduce(function(s,r){ return s + r.amount; }, 0);
-            var totalKassa = totalIncome - totalExpense - totalPayroll;
+            var totalKassa = Math.max(0, totalIncome - totalExpense - totalPayroll);
 
             var todayOrders = orders.filter(function(o){ return o.date === today; });
+            var todayIncomes = incomes.filter(function(e){ return e.date === today; });
             var todayExpenses = expenses.filter(function(e){ return e.date === today; });
             var todayPayrollRecs = payrollRecords.filter(function(r){ return r.date === today; });
-            var todayIncome = todayOrders.reduce(function(s,o){ return s + paidAmount(o); }, 0);
+            var todayOrdersIncome = todayOrders.reduce(function(s,o){ return s + paidAmount(o); }, 0);
+            var todayManualIncome = todayIncomes.reduce(function(s,e){ return s + e.amount; }, 0);
+            var todayIncome = todayOrdersIncome + todayManualIncome;
             var todayExpenseSum = todayExpenses.reduce(function(s,e){ return s + e.amount; }, 0);
             var todayPayrollSum = todayPayrollRecs.reduce(function(s,r){ return s + r.amount; }, 0);
-            var todayKassa = todayIncome - todayExpenseSum - todayPayrollSum;
 
-            var naqdTotal = orders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
-            var terminalTotal = orders.reduce(function(s,o){ return s+terminalPartOf(o); }, 0);
+            var todayNaqdRaw = todayOrders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
+            var todayNaqdNet = Math.max(0, todayNaqdRaw + todayManualIncome - todayExpenseSum - todayPayrollSum);
+            var todayTerminal = todayOrders.reduce(function(s,o){ return s+terminalPartOf(o); }, 0);
+            var todayKassa = todayNaqdNet + todayTerminal;
 
-            var cards = document.getElementById('stat-cards');
-            cards.innerHTML =
-                '<div class="stat-card profit"><div class="label">📊 Umumiy kassa</div><div class="value">'+fmt(totalKassa)+' so\'m</div></div>' +
-                '<div class="stat-card income"><div class="label">📅 Bugungi kassa</div><div class="value">'+fmt(todayKassa)+' so\'m</div></div>' +
-                '<div class="stat-card"><div class="label">💵 Naqd kassa</div><div class="value">'+fmt(naqdTotal)+' so\'m</div></div>' +
-                '<div class="stat-card"><div class="label">💳 Terminal kassa</div><div class="value">'+fmt(terminalTotal)+' so\'m</div></div>' +
-                '<div class="stat-card expense"><div class="label">💸 Chiqimlar</div><div class="value">'+fmt(totalExpense)+' so\'m</div></div>' +
-                '<div class="stat-card expense"><div class="label">🧑‍🔧 Ish haqi (jami)</div><div class="value">'+fmt(totalPayroll)+' so\'m</div></div>';
+            var heroKassa = document.getElementById('today-kassa-big');
+            var heroNaqd = document.getElementById('today-naqd-big');
+            var heroTerminal = document.getElementById('today-terminal-big');
+            if(heroKassa) heroKassa.innerText = fmt(todayKassa) + " so'm";
+            if(heroNaqd) heroNaqd.innerText = '💵 Naqd: ' + fmt(todayNaqdNet) + " so'm";
+            if(heroTerminal) heroTerminal.innerText = '💳 Karta: ' + fmt(todayTerminal) + " so'm";
 
             var tbody = document.getElementById('exp-table');
             tbody.innerHTML = '';
-            var combined = expenses.map(function(e) {
-                return { date: e.date, note: e.note, amount: e.amount, onDelete: 'delExpense(' + e.id + ')' };
-            }).concat(payrollRecords.map(function(r) {
-                return { date: r.date, note: '🧑‍🔧 Ish haqi: ' + r.worker + (r.note && r.note !== '-' ? ' — ' + r.note : ''), amount: r.amount, onDelete: 'deletePayrollRecord(' + r.id + ')' };
+            var combined = incomes.map(function(e) {
+                return { date: e.date, note: '➕ ' + e.note, amount: e.amount, positive: true, onDelete: 'delIncome(' + e.id + ')' };
+            }).concat(expenses.map(function(e) {
+                return { date: e.date, note: e.note, amount: e.amount, positive: false, onDelete: 'delExpense(' + e.id + ')' };
+            })).concat(payrollRecords.map(function(r) {
+                return { date: r.date, note: '🧑‍🔧 Ish haqi: ' + r.worker + (r.note && r.note !== '-' ? ' — ' + r.note : ''), amount: r.amount, positive: false, onDelete: 'deletePayrollRecord(' + r.id + ')' };
             }));
             combined.sort(function(a, b){ return b.date.localeCompare(a.date); });
             combined.slice(0, 15).forEach(function(e) {
-                tbody.innerHTML += '<tr><td>'+e.date+'</td><td>'+e.note+'</td><td style="color:#ef4444;font-weight:bold;">-'+fmt(e.amount)+' so\'m</td><td><button onclick="'+e.onDelete+'" style="color:red;border:none;background:none;cursor:pointer;">O\'chirish</button></td></tr>';
+                var sign = e.positive ? '+' : '-';
+                var color = e.positive ? '#10b981' : '#ef4444';
+                tbody.innerHTML += '<tr><td>'+e.date+'</td><td>'+e.note+'</td><td style="color:'+color+';font-weight:bold;">'+sign+fmt(e.amount)+' so\'m</td><td><button onclick="'+e.onDelete+'" style="color:red;border:none;background:none;cursor:pointer;">O\'chirish</button></td></tr>';
             });
         }
 
@@ -2333,6 +2423,76 @@
             persistAll();
             renderPayroll();
             renderFinance();
+        }
+
+        // ===== SHAXSIY PUL HISOBI (kassaga mutlaqo ta'sir qilmaydi) =====
+        function addPersonalRecord() {
+            var date = document.getElementById('pl-date').value || todayStr();
+            var type = document.getElementById('pl-type').value;
+            var amount = Number(document.getElementById('pl-amount').value) || 0;
+            var note = (document.getElementById('pl-note').value || '').trim() || '-';
+
+            if(!amount) return alert("Summani kiriting!");
+
+            personalLedger.unshift({ id: Date.now(), date: date, type: type, amount: amount, note: note });
+            persistAll();
+
+            document.getElementById('pl-amount').value = '';
+            document.getElementById('pl-note').value = '';
+            document.getElementById('pl-date').value = todayStr();
+
+            renderPersonalLedger();
+        }
+
+        function deletePersonalRecord(id) {
+            if(!confirm("Bu qaydni o'chirmoqchimisiz?")) return;
+            personalLedger = personalLedger.filter(function(x){ return x.id !== id; });
+            persistAll();
+            renderPersonalLedger();
+        }
+
+        function renderPersonalLedger() {
+            var monthInput = document.getElementById('pl-month');
+            if(!monthInput) return;
+            if(!monthInput.value) {
+                var d = new Date();
+                monthInput.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            }
+            var dateInput = document.getElementById('pl-date');
+            if(dateInput && !dateInput.value) dateInput.value = todayStr();
+
+            var month = monthInput.value;
+            var filtered = personalLedger.filter(function(r){ return !month || (r.date && r.date.indexOf(month) === 0); });
+
+            var income = filtered.filter(function(r){ return r.type === 'income'; }).reduce(function(s,r){ return s + r.amount; }, 0);
+            var expense = filtered.filter(function(r){ return r.type === 'expense'; }).reduce(function(s,r){ return s + r.amount; }, 0);
+            var net = income - expense;
+
+            var cards = document.getElementById('pl-stat-cards');
+            if(cards) {
+                cards.innerHTML =
+                    '<div class="stat-card income"><div class="label">➕ Ishlagan (shu oy)</div><div class="value">' + fmt(income) + " so'm</div></div>" +
+                    '<div class="stat-card expense"><div class="label">➖ Ishlatgan (shu oy)</div><div class="value">' + fmt(expense) + " so'm</div></div>" +
+                    '<div class="stat-card profit"><div class="label">⚖️ Sof qoldiq (shu oy)</div><div class="value">' + fmt(net) + " so'm</div></div>";
+            }
+
+            var wrap = document.getElementById('personal-ledger-list');
+            if(!wrap) return;
+            if(filtered.length === 0) {
+                wrap.innerHTML = '<p style="color:#999; font-size:13px;">Bu oyda qayd yo\'q</p>';
+                return;
+            }
+            var sorted = filtered.slice().sort(function(a, b){ return b.date.localeCompare(a.date) || b.id - a.id; });
+            wrap.innerHTML = sorted.map(function(r) {
+                var isIncome = r.type === 'income';
+                return '<div class="order-item-card" style="border-left-color:' + (isIncome ? '#10b981' : '#ef4444') + ';">' +
+                    '<div class="oi-info">' +
+                        '<div class="oi-name">' + (isIncome ? '➕ ' : '➖ ') + fmt(r.amount) + " so'm</div>" +
+                        '<div class="oi-meta">📅 ' + r.date + (r.note && r.note !== '-' ? ' · ' + r.note : '') + '</div>' +
+                    '</div>' +
+                    '<button class="oi-remove" onclick="deletePersonalRecord(' + r.id + ')">✕</button>' +
+                '</div>';
+            }).join('');
         }
 
         var prWorkerFilter = '';
