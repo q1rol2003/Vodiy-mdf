@@ -559,10 +559,7 @@
 
                 <div class="order-card">
                     <h4>📋 Kirim-chiqim tarixi</h4>
-                    <table>
-                        <thead><tr><th>Sana</th><th>Izoh</th><th>Summa</th><th>Amal</th></tr></thead>
-                        <tbody id="exp-table"></tbody>
-                    </table>
+                    <div id="exp-table"><p style="color:#999; font-size:13px;">Hali qayd yo'q</p></div>
                 </div>
             </div>
 
@@ -1211,7 +1208,6 @@
             if(heroTerminal) heroTerminal.innerText = '💳 Karta: ' + fmt(todayTerminal) + " so'm";
 
             var tbody = document.getElementById('exp-table');
-            tbody.innerHTML = '';
             var combined = incomes.map(function(e) {
                 return { date: e.date, note: '➕ ' + e.note, amount: e.amount, positive: true, onDelete: 'delIncome(' + e.id + ')' };
             }).concat(expenses.map(function(e) {
@@ -1219,12 +1215,35 @@
             })).concat(payrollRecords.map(function(r) {
                 return { date: r.date, note: '🧑‍🔧 Ish haqi: ' + r.worker + (r.note && r.note !== '-' ? ' — ' + r.note : ''), amount: r.amount, positive: false, onDelete: 'deletePayrollRecord(' + r.id + ')' };
             }));
-            combined.sort(function(a, b){ return b.date.localeCompare(a.date); });
-            combined.slice(0, 15).forEach(function(e) {
-                var sign = e.positive ? '+' : '-';
-                var color = e.positive ? '#10b981' : '#ef4444';
-                tbody.innerHTML += '<tr><td>'+e.date+'</td><td>'+e.note+'</td><td style="color:'+color+';font-weight:bold;">'+sign+fmt(e.amount)+' so\'m</td><td><button onclick="'+e.onDelete+'" style="color:red;border:none;background:none;cursor:pointer;">O\'chirish</button></td></tr>';
+
+            orders.forEach(function(o) {
+                if(o.avans > 0) {
+                    combined.push({ date: o.date, note: '👤 ' + o.client + " — boshlang'ich to'lov", amount: o.avans, positive: true, onDelete: null });
+                }
+                (o.payments || []).forEach(function(p) {
+                    combined.push({ date: p.date, note: '👤 ' + o.client + " — qarz to'lovi (" + (p.method === 'terminal' ? 'Terminal' : 'Naqd') + ')', amount: p.amount, positive: true, onDelete: null });
+                });
             });
+
+            combined.sort(function(a, b){ return b.date.localeCompare(a.date); });
+            var topCombined = combined.slice(0, 25);
+
+            if(topCombined.length === 0) {
+                tbody.innerHTML = '<p style="color:#999; font-size:13px;">Hali qayd yo\'q</p>';
+            } else {
+                tbody.innerHTML = topCombined.map(function(e) {
+                    var sign = e.positive ? '+' : '-';
+                    var color = e.positive ? '#10b981' : '#ef4444';
+                    var delBtn = e.onDelete ? '<button class="oi-remove" onclick="'+e.onDelete+'">✕</button>' : '';
+                    return '<div class="order-item-card" style="border-left-color:' + color + ';">' +
+                        '<div class="oi-info">' +
+                            '<div class="oi-name" style="color:' + color + '; font-size:15px;">' + sign + fmt(e.amount) + " so'm</div>" +
+                            '<div class="oi-meta">📅 ' + e.date + ' · ' + e.note + '</div>' +
+                        '</div>' +
+                        delBtn +
+                    '</div>';
+                }).join('');
+            }
         }
 
         function tab(name) {
