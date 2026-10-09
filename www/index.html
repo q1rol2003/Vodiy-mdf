@@ -830,6 +830,19 @@
     <script>
         function login() {
             var val = document.getElementById('pass-val').value;
+
+            if (!firebaseDataLoaded) {
+                document.getElementById('sync-loading').style.display = 'flex';
+                firebaseLoadCallbacks.push(function() {
+                    document.getElementById('sync-loading').style.display = 'none';
+                    attemptLogin(val);
+                });
+                return;
+            }
+            attemptLogin(val);
+        }
+
+        function attemptLogin(val) {
             if(val === appPassword) {
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
@@ -972,29 +985,44 @@
             loadTgSettings();
         }
 
-        // Ilova ochilganda: avval mavjud ma'lumotni bir marta o'qiydi, keyin doimiy
-        // tinglovchi (listener) o'rnatadi — shu tufayli boshqa qurilmadagi o'zgarish
-        // darhol, avtomatik ravishda shu qurilmada ham ko'rinadi.
-        function startRealtimeSync(callback) {
+        // Ilova sahifasi ochilishi bilan (parol kiritishdan OLDIN) Firebase'dagi haqiqiy
+        // ma'lumotni (shu jumladan haqiqiy parolni) fonda bir marta yuklab oladi. Shu
+        // tufayli ilova qayta o'rnatilgach ham (mahalliy xotira tozalangan bo'lsa ham)
+        // odam o'zining haqiqiy paroli bilan kira oladi va ma'lumotlar "yo'qolib qolmaydi".
+        var firebaseDataLoaded = false;
+        var firebaseLoadCallbacks = [];
+
+        function preloadFirebaseData() {
             if (!firebaseReady) {
-                updateSyncStatus('⚠️ Firebase hali sozlanmagan. "Sozlamalar" bo\'limidagi ko\'rsatmaga qarang.');
-                if (callback) callback();
+                firebaseDataLoaded = true;
                 return;
             }
             dataRef.once('value').then(function(snap) {
                 applyRemoteData(snap.val());
-                if (callback) callback();
-                dataRef.on('value', function(snap2) {
-                    var data = snap2.val();
-                    if (!data || data.updatedAt === lastLocalWriteTs) return; // o'zimiz yozgan o'zgarish, qayta ishlamaymiz
-                    applyRemoteData(data);
-                    renderAll();
-                    updateSyncStatus('🔄 Boshqa qurilmadan yangilandi: ' + new Date().toLocaleTimeString());
-                });
+                firebaseDataLoaded = true;
+                firebaseLoadCallbacks.forEach(function(cb){ cb(); });
+                firebaseLoadCallbacks = [];
             }).catch(function(err) {
-                console.error('Firebase\'dan yuklashda xato:', err);
-                updateSyncStatus('⚠️ Ulanishda xatolik: ' + err.message);
-                if (callback) callback();
+                console.error('Firebase\'dan dastlabki yuklashda xato:', err);
+                firebaseDataLoaded = true;
+                firebaseLoadCallbacks.forEach(function(cb){ cb(); });
+                firebaseLoadCallbacks = [];
+            });
+        }
+        preloadFirebaseData();
+
+        // Login qilingandan keyin: boshqa qurilmadagi o'zgarishlarni real vaqtda kuzatib boradi.
+        function startLiveListener() {
+            if (!firebaseReady) {
+                updateSyncStatus('⚠️ Firebase hali sozlanmagan. "Sozlamalar" bo\'limidagi ko\'rsatmaga qarang.');
+                return;
+            }
+            dataRef.on('value', function(snap2) {
+                var data = snap2.val();
+                if (!data || data.updatedAt === lastLocalWriteTs) return; // o'zimiz yozgan o'zgarish, qayta ishlamaymiz
+                applyRemoteData(data);
+                renderAll();
+                updateSyncStatus('🔄 Boshqa qurilmadan yangilandi: ' + new Date().toLocaleTimeString());
             });
         }
 
@@ -1063,11 +1091,8 @@
             document.getElementById('inc-date').value = yyyy + '-' + mm + '-' + dd;
             setToday();
 
-            document.getElementById('sync-loading').style.display = 'flex';
-            startRealtimeSync(function() {
-                renderAll();
-                document.getElementById('sync-loading').style.display = 'none';
-            });
+            renderAll();
+            startLiveListener();
         }
 
         function todayStr() {
