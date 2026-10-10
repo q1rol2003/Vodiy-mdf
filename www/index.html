@@ -947,6 +947,7 @@
                 .catch(function(err) {
                     console.error('Firebase\'ga saqlashda xato:', err);
                     updateSyncStatus('⚠️ Sinxronlashda xatolik: ' + err.message);
+                    alert('❌ Ma\'lumot Firebase\'ga saqlanmadi!\n\nXato: ' + err.message + '\n\nBu yozuv faqat shu qurilmada qoldi, boshqa qurilmaga sinxronlanmadi.');
                 });
         }
 
@@ -1005,6 +1006,7 @@
             }).catch(function(err) {
                 console.error('Firebase\'dan dastlabki yuklashda xato:', err);
                 firebaseDataLoaded = true;
+                alert('❌ Firebase\'dan ma\'lumot yuklanmadi!\n\nXato: ' + err.message + '\n\nInternetni tekshiring. Hozircha faqat shu qurilmadagi (bo\'lsa) eski ma\'lumotlar ko\'rinadi.');
                 firebaseLoadCallbacks.forEach(function(cb){ cb(); });
                 firebaseLoadCallbacks = [];
             });
