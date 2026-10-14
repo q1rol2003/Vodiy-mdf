@@ -532,9 +532,13 @@
 
                 <div class="order-card">
                     <h4>➖ Chiqim qo'shish</h4>
-                    <div class="expense-form">
+                    <div class="expense-form" style="grid-template-columns: 2fr 1fr 1fr 1fr auto;">
                         <input type="text" id="exp-note" placeholder="Chiqim izohi (Masalan: Ish haqi, Yog'och, Elektr)">
                         <input type="number" id="exp-amount" placeholder="Summa (so'm)">
+                        <select id="exp-method">
+                            <option value="naqd">💵 Naqd</option>
+                            <option value="terminal">💳 Terminal</option>
+                        </select>
                         <input type="date" id="exp-date">
                         <button onclick="addExpense()">➖ Chiqim qo'shish</button>
                     </div>
@@ -1124,14 +1128,47 @@
             return o.paymentType === 'terminal' ? paidAmount(o) : 0;
         }
 
+        // Buyurtma yaratilgan kunda (avans sifatida) kelgan naqd/terminal qismi —
+        // keyinroq qarz to'lovlari orqali qo'shilgan summalarni CHIQARIB tashlaydi,
+        // chunki ular o'z sanasida (to'lov qilingan kunda) alohida hisoblanadi.
+        function initialNaqdOf(o) {
+            var fromPayments = (o.payments || []).filter(function(p){ return p.method !== 'terminal'; }).reduce(function(s,p){ return s+p.amount; }, 0);
+            return naqdPartOf(o) - fromPayments;
+        }
+        function initialTerminalOf(o) {
+            var fromPayments = (o.payments || []).filter(function(p){ return p.method === 'terminal'; }).reduce(function(s,p){ return s+p.amount; }, 0);
+            return terminalPartOf(o) - fromPayments;
+        }
+
+        // Berilgan sana oralig'ida HAQIQATDA kirgan naqd/terminal pulni hisoblaydi:
+        // har bir buyurtmaning boshlang'ich avansi (o.date kunida) + har bir qarz
+        // to'lovi (o'z to'langan sanasida) — alohida voqealar sifatida.
+        function paymentEventsInRange(from, to) {
+            var naqd = 0, terminal = 0;
+            orders.forEach(function(o) {
+                if(o.date >= from && o.date <= to) {
+                    naqd += initialNaqdOf(o);
+                    terminal += initialTerminalOf(o);
+                }
+                (o.payments || []).forEach(function(p) {
+                    if(p.date >= from && p.date <= to) {
+                        if(p.method === 'terminal') terminal += p.amount;
+                        else naqd += p.amount;
+                    }
+                });
+            });
+            return { naqd: naqd, terminal: terminal };
+        }
+
         function addExpense() {
             var note = document.getElementById('exp-note').value;
             var amount = Number(document.getElementById('exp-amount').value);
+            var method = document.getElementById('exp-method').value;
             var date = document.getElementById('exp-date').value || todayStr();
 
             if(!note || !amount) return alert('Izoh va summani kiriting!');
 
-            expenses.unshift({ id: Date.now(), note: note, amount: amount, date: date });
+            expenses.unshift({ id: Date.now(), note: note, amount: amount, method: method, date: date });
             persistAll();
 
             document.getElementById('exp-note').value = '';
@@ -1175,18 +1212,19 @@
             var to = document.getElementById('period-to').value;
             if(!from || !to) return alert("Davr boshi va oxirini tanlang!");
 
-            var periodOrders = orders.filter(function(o){ return o.date >= from && o.date <= to; });
             var periodIncomes = incomes.filter(function(e){ return e.date >= from && e.date <= to; });
             var periodExpenses = expenses.filter(function(e){ return e.date >= from && e.date <= to; });
             var periodPayroll = payrollRecords.filter(function(r){ return r.date >= from && r.date <= to; });
 
-            var naqdRaw = periodOrders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
-            var terminal = periodOrders.reduce(function(s,o){ return s+terminalPartOf(o); }, 0);
+            var events = paymentEventsInRange(from, to);
             var qoshimchaKirim = periodIncomes.reduce(function(s,e){ return s+e.amount; }, 0);
-            var chiqim = periodExpenses.reduce(function(s,e){ return s+e.amount; }, 0);
+            var chiqimNaqd = periodExpenses.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var chiqimTerminal = periodExpenses.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var chiqim = chiqimNaqd + chiqimTerminal;
             var ishHaqi = periodPayroll.reduce(function(s,r){ return s+r.amount; }, 0);
 
-            var naqd = Math.max(0, naqdRaw + qoshimchaKirim - chiqim - ishHaqi);
+            var naqd = Math.max(0, events.naqd + qoshimchaKirim - chiqimNaqd - ishHaqi);
+            var terminal = Math.max(0, events.terminal - chiqimTerminal);
             var umumiyKassa = naqd + terminal;
 
             var box = document.getElementById('period-result');
@@ -1212,19 +1250,18 @@
             var totalPayroll = payrollRecords.reduce(function(s,r){ return s + r.amount; }, 0);
             var totalKassa = Math.max(0, totalIncome - totalExpense - totalPayroll);
 
-            var todayOrders = orders.filter(function(o){ return o.date === today; });
             var todayIncomes = incomes.filter(function(e){ return e.date === today; });
             var todayExpenses = expenses.filter(function(e){ return e.date === today; });
             var todayPayrollRecs = payrollRecords.filter(function(r){ return r.date === today; });
-            var todayOrdersIncome = todayOrders.reduce(function(s,o){ return s + paidAmount(o); }, 0);
             var todayManualIncome = todayIncomes.reduce(function(s,e){ return s + e.amount; }, 0);
-            var todayIncome = todayOrdersIncome + todayManualIncome;
-            var todayExpenseSum = todayExpenses.reduce(function(s,e){ return s + e.amount; }, 0);
+            var todayExpenseNaqd = todayExpenses.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var todayExpenseTerminal = todayExpenses.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var todayExpenseSum = todayExpenseNaqd + todayExpenseTerminal;
             var todayPayrollSum = todayPayrollRecs.reduce(function(s,r){ return s + r.amount; }, 0);
 
-            var todayNaqdRaw = todayOrders.reduce(function(s,o){ return s+naqdPartOf(o); }, 0);
-            var todayNaqdNet = Math.max(0, todayNaqdRaw + todayManualIncome - todayExpenseSum - todayPayrollSum);
-            var todayTerminal = todayOrders.reduce(function(s,o){ return s+terminalPartOf(o); }, 0);
+            var todayEvents = paymentEventsInRange(today, today);
+            var todayNaqdNet = Math.max(0, todayEvents.naqd + todayManualIncome - todayExpenseNaqd - todayPayrollSum);
+            var todayTerminal = Math.max(0, todayEvents.terminal - todayExpenseTerminal);
             var todayKassa = todayNaqdNet + todayTerminal;
 
             var heroKassa = document.getElementById('today-kassa-big');
@@ -1238,7 +1275,8 @@
             var combined = incomes.map(function(e) {
                 return { date: e.date, note: '➕ ' + e.note, amount: e.amount, positive: true, onDelete: 'delIncome(' + e.id + ')' };
             }).concat(expenses.map(function(e) {
-                return { date: e.date, note: e.note, amount: e.amount, positive: false, onDelete: 'delExpense(' + e.id + ')' };
+                var methodTag = e.method === 'terminal' ? ' (💳)' : ' (💵)';
+                return { date: e.date, note: e.note + methodTag, amount: e.amount, positive: false, onDelete: 'delExpense(' + e.id + ')' };
             })).concat(payrollRecords.map(function(r) {
                 return { date: r.date, note: '🧑‍🔧 Ish haqi: ' + r.worker + (r.note && r.note !== '-' ? ' — ' + r.note : ''), amount: r.amount, positive: false, onDelete: 'deletePayrollRecord(' + r.id + ')' };
             }));
