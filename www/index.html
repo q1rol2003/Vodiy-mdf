@@ -327,7 +327,8 @@
             .form-grid[style] { grid-template-columns: 1fr !important; }
             .form-grid > * { grid-column: 1 / -1 !important; }
 
-            .expense-form { grid-template-columns: 1fr; }
+            .expense-form,
+            .expense-form[style] { grid-template-columns: 1fr !important; }
             .expense-form button { width: 100%; }
 
             .period-bar { flex-direction: column; align-items: stretch; }
@@ -522,9 +523,13 @@
 
                 <div class="order-card">
                     <h4>➕ Kirim qo'shish</h4>
-                    <div class="expense-form">
+                    <div class="expense-form" style="grid-template-columns: 2fr 1fr 1fr 1fr auto;">
                         <input type="text" id="inc-note" placeholder="Kirim izohi (Masalan: Qo'shimcha kirim, Qarz qaytdi)">
                         <input type="number" id="inc-amount" placeholder="Summa (so'm)">
+                        <select id="inc-method">
+                            <option value="naqd">💵 Naqd</option>
+                            <option value="terminal">💳 Terminal</option>
+                        </select>
                         <input type="date" id="inc-date">
                         <button onclick="addIncome()" style="background:#10b981;">➕ Kirim qo'shish</button>
                     </div>
@@ -1187,11 +1192,12 @@
         function addIncome() {
             var note = document.getElementById('inc-note').value;
             var amount = Number(document.getElementById('inc-amount').value);
+            var method = document.getElementById('inc-method').value;
             var date = document.getElementById('inc-date').value || todayStr();
 
             if(!note || !amount) return alert('Izoh va summani kiriting!');
 
-            incomes.unshift({ id: Date.now(), note: note, amount: amount, date: date });
+            incomes.unshift({ id: Date.now(), note: note, amount: amount, method: method, date: date });
             persistAll();
 
             document.getElementById('inc-note').value = '';
@@ -1217,14 +1223,16 @@
             var periodPayroll = payrollRecords.filter(function(r){ return r.date >= from && r.date <= to; });
 
             var events = paymentEventsInRange(from, to);
-            var qoshimchaKirim = periodIncomes.reduce(function(s,e){ return s+e.amount; }, 0);
+            var qoshimchaKirimNaqd = periodIncomes.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var qoshimchaKirimTerminal = periodIncomes.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var qoshimchaKirim = qoshimchaKirimNaqd + qoshimchaKirimTerminal;
             var chiqimNaqd = periodExpenses.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
             var chiqimTerminal = periodExpenses.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
             var chiqim = chiqimNaqd + chiqimTerminal;
             var ishHaqi = periodPayroll.reduce(function(s,r){ return s+r.amount; }, 0);
 
-            var naqd = Math.max(0, events.naqd + qoshimchaKirim - chiqimNaqd - ishHaqi);
-            var terminal = Math.max(0, events.terminal - chiqimTerminal);
+            var naqd = Math.max(0, events.naqd + qoshimchaKirimNaqd - chiqimNaqd - ishHaqi);
+            var terminal = Math.max(0, events.terminal + qoshimchaKirimTerminal - chiqimTerminal);
             var umumiyKassa = naqd + terminal;
 
             var box = document.getElementById('period-result');
@@ -1253,15 +1261,16 @@
             var todayIncomes = incomes.filter(function(e){ return e.date === today; });
             var todayExpenses = expenses.filter(function(e){ return e.date === today; });
             var todayPayrollRecs = payrollRecords.filter(function(r){ return r.date === today; });
-            var todayManualIncome = todayIncomes.reduce(function(s,e){ return s + e.amount; }, 0);
+            var todayManualIncomeNaqd = todayIncomes.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
+            var todayManualIncomeTerminal = todayIncomes.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
             var todayExpenseNaqd = todayExpenses.filter(function(e){ return e.method !== 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
             var todayExpenseTerminal = todayExpenses.filter(function(e){ return e.method === 'terminal'; }).reduce(function(s,e){ return s+e.amount; }, 0);
             var todayExpenseSum = todayExpenseNaqd + todayExpenseTerminal;
             var todayPayrollSum = todayPayrollRecs.reduce(function(s,r){ return s + r.amount; }, 0);
 
             var todayEvents = paymentEventsInRange(today, today);
-            var todayNaqdNet = Math.max(0, todayEvents.naqd + todayManualIncome - todayExpenseNaqd - todayPayrollSum);
-            var todayTerminal = Math.max(0, todayEvents.terminal - todayExpenseTerminal);
+            var todayNaqdNet = Math.max(0, todayEvents.naqd + todayManualIncomeNaqd - todayExpenseNaqd - todayPayrollSum);
+            var todayTerminal = Math.max(0, todayEvents.terminal + todayManualIncomeTerminal - todayExpenseTerminal);
             var todayKassa = todayNaqdNet + todayTerminal;
 
             var heroKassa = document.getElementById('today-kassa-big');
@@ -1273,7 +1282,8 @@
 
             var tbody = document.getElementById('exp-table');
             var combined = incomes.map(function(e) {
-                return { date: e.date, note: '➕ ' + e.note, amount: e.amount, positive: true, onDelete: 'delIncome(' + e.id + ')' };
+                var methodTag = e.method === 'terminal' ? ' (💳)' : ' (💵)';
+                return { date: e.date, note: '➕ ' + e.note + methodTag, amount: e.amount, positive: true, onDelete: 'delIncome(' + e.id + ')' };
             }).concat(expenses.map(function(e) {
                 var methodTag = e.method === 'terminal' ? ' (💳)' : ' (💵)';
                 return { date: e.date, note: e.note + methodTag, amount: e.amount, positive: false, onDelete: 'delExpense(' + e.id + ')' };
