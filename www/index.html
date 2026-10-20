@@ -568,6 +568,10 @@
 
                 <div class="order-card">
                     <h4>📋 Kirim-chiqim tarixi</h4>
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                        <input type="date" id="exp-table-date" oninput="renderFinance()" style="padding:8px; border:1px solid #ccc; border-radius:6px; font-size:13.5px;">
+                        <button type="button" onclick="document.getElementById('exp-table-date').value=''; renderFinance();" style="padding:8px 12px; background:#eef2f7; color:#2563eb; border:none; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer;">📅 Faqat bugun</button>
+                    </div>
                     <div id="exp-table"><p style="color:#999; font-size:13px;">Hali qayd yo'q</p></div>
                 </div>
             </div>
@@ -1300,11 +1304,16 @@
                 });
             });
 
-            combined.sort(function(a, b){ return b.date.localeCompare(a.date); });
-            var topCombined = combined.slice(0, 25);
+            var filterDateEl = document.getElementById('exp-table-date');
+            var filterDate = filterDateEl ? filterDateEl.value : '';
+            var dayFilter = filterDate || today;
+            var filteredCombined = combined.filter(function(e){ return e.date === dayFilter; });
+
+            filteredCombined.sort(function(a, b){ return b.date.localeCompare(a.date); });
+            var topCombined = filteredCombined.slice(0, 50);
 
             if(topCombined.length === 0) {
-                tbody.innerHTML = '<p style="color:#999; font-size:13px;">Hali qayd yo\'q</p>';
+                tbody.innerHTML = '<p style="color:#999; font-size:13px;">' + (filterDate ? 'Shu kunda qayd yo\'q' : 'Bugun hali qayd yo\'q') + '</p>';
             } else {
                 tbody.innerHTML = topCombined.map(function(e) {
                     var sign = e.positive ? '+' : '-';
