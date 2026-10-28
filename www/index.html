@@ -387,6 +387,28 @@
         </div>
     </div>
 
+    <!-- QARZDAN CHEGIRMA OYNASI -->
+    <div id="disc-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.55); display:none; align-items:center; justify-content:center; z-index:99998;">
+        <div style="background:#fff; border-radius:12px; padding:22px; width:340px; max-width:92%; box-shadow:0 10px 30px rgba(0,0,0,0.35);">
+            <h3 style="font-size:17px; margin-bottom:4px; color:#0f172a;">🏷️ Qarzdan chegirma</h3>
+            <div id="disc-cust-name" style="font-size:13px; color:#64748b; margin-bottom:12px;">Mijoz: -</div>
+            <div id="disc-current-debt" style="background:#fef2f2; color:#ef4444; font-weight:800; padding:10px; border-radius:8px; margin-bottom:14px; font-size:14px;">Joriy qarz: 0 so'm</div>
+
+            <label style="font-size:12.5px; color:#64748b; font-weight:600; display:block; margin-bottom:5px;">Chegirma summasi (so'm)</label>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="number" id="disc-amount" oninput="updateDiscPreview()" placeholder="Masalan: 100000" style="flex:1; padding:11px; border:1px solid #ccc; border-radius:6px; font-size:15px;">
+                <button type="button" onclick="fillFullDiscount()" style="padding:0 12px; background:#ede9fe; color:#7c3aed; border:none; border-radius:6px; font-weight:700; font-size:12.5px; cursor:pointer;">Hammasi</button>
+            </div>
+            <p id="disc-preview" style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:6px;"></p>
+            <p style="font-size:12px; color:#94a3b8; margin-bottom:14px;">Chegirma qilingan summa qarzdan ayriladi, kassaga esa hech qanday ta'sir qilmaydi (chunki bu pul olinmagan).</p>
+
+            <div style="display:flex; gap:8px;">
+                <button onclick="closeDiscModal()" style="flex:1; padding:12px; background:#e2e8f0; color:#0f172a; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Bekor qilish</button>
+                <button onclick="confirmDiscount()" style="flex:1; padding:12px; background:#7c3aed; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">✅ Tasdiqlash</button>
+            </div>
+        </div>
+    </div>
+
     <!-- BUYURTMANI TO'LIQ TAHRIRLASH OYNASI -->
     <div id="edit-order-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.55); display: none; align-items: center; justify-content: center; z-index: 99998;">
         <div style="background: #fff; border-radius: 12px; padding: 20px; width: 420px; max-width: 94%; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
@@ -423,6 +445,57 @@
             <div style="display:flex; gap:8px;">
                 <button onclick="closeEditOrderModal()" style="flex:1; padding:12px; background:#e2e8f0; color:#0f172a; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Bekor qilish</button>
                 <button onclick="saveEditedOrder()" style="flex:1; padding:12px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">✅ Saqlash</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== KALKULYATOR (iPhone uslubida) ===== -->
+    <style>
+        #calc-fab { position: fixed; right: 16px; bottom: 18px; width: 54px; height: 54px; border-radius: 50%; border: none; background: #1c1c1e; color: #fff; font-size: 24px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); z-index: 9000; cursor: pointer; opacity: 0.94; }
+        #calc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 99990; align-items: flex-end; justify-content: center; }
+        #calc-box { background: #000; width: 100%; max-width: 400px; border-radius: 28px 28px 0 0; padding: 12px 16px 26px; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; }
+        #calc-top { display: flex; justify-content: space-between; align-items: center; color: #8e8e93; font-size: 13px; margin-bottom: 2px; }
+        #calc-close { background: #333; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; cursor: pointer; }
+        #calc-display { color: #fff; text-align: right; font-weight: 300; font-size: 72px; line-height: 1.1; min-height: 84px; padding: 6px 6px 14px; overflow: hidden; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+        #calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .calc-b { aspect-ratio: 1 / 1; border: none; border-radius: 50%; font-size: 32px; color: #fff; background: #333; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; font-family: inherit; font-weight: 400; display: flex; align-items: center; justify-content: center; }
+        .calc-b:active { filter: brightness(1.5); }
+        .calc-f { background: #a5a5a5; color: #000; }
+        .calc-o { background: #ff9f0a; font-size: 38px; }
+        .calc-o.active { background: #fff; color: #ff9f0a; }
+        .calc-zero { grid-column: span 2; aspect-ratio: auto; border-radius: 40px; justify-content: flex-start; padding-left: 30px; }
+    </style>
+
+    <button id="calc-fab" onclick="openCalc()" title="Kalkulyator">🧮</button>
+
+    <div id="calc-modal" onclick="if(event.target===this) closeCalc()">
+        <div id="calc-box">
+            <div id="calc-top"><span>Kalkulyator</span><button id="calc-close" onclick="closeCalc()">✕</button></div>
+            <div id="calc-display">0</div>
+            <div id="calc-grid">
+                <button class="calc-b calc-f" data-k="ac" id="calc-ac">AC</button>
+                <button class="calc-b calc-f" data-k="sign">+/−</button>
+                <button class="calc-b calc-f" data-k="pct">%</button>
+                <button class="calc-b calc-o" data-k="/">÷</button>
+
+                <button class="calc-b" data-k="7">7</button>
+                <button class="calc-b" data-k="8">8</button>
+                <button class="calc-b" data-k="9">9</button>
+                <button class="calc-b calc-o" data-k="*">×</button>
+
+                <button class="calc-b" data-k="4">4</button>
+                <button class="calc-b" data-k="5">5</button>
+                <button class="calc-b" data-k="6">6</button>
+                <button class="calc-b calc-o" data-k="-">−</button>
+
+                <button class="calc-b" data-k="1">1</button>
+                <button class="calc-b" data-k="2">2</button>
+                <button class="calc-b" data-k="3">3</button>
+                <button class="calc-b calc-o" data-k="+">+</button>
+
+                <button class="calc-b calc-zero" data-k="0">0</button>
+                <button class="calc-b" data-k=".">,</button>
+                <button class="calc-b calc-o" data-k="=">=</button>
             </div>
         </div>
     </div>
@@ -1043,6 +1116,16 @@
 
         // Barcha qurilma/brauzerlarda bir xil ko'rinishi uchun raqamlarni formatlash
         // (toLocaleString() qurilma tiliga qarab har xil formatda chiqarardi)
+        // Tugmani tez-tez (ikki marta) bosib yuborish tufayli bitta amal
+        // ikki marta yozilib ketishining oldini oladi.
+        var _doubleSubmitGuard = {};
+        function preventDoubleSubmit(key) {
+            if (_doubleSubmitGuard[key]) return true;
+            _doubleSubmitGuard[key] = true;
+            setTimeout(function(){ _doubleSubmitGuard[key] = false; }, 1200);
+            return false;
+        }
+
         function fmt(n) {
             n = Math.round(Number(n) || 0);
             var neg = n < 0;
@@ -1170,6 +1253,7 @@
         }
 
         function addExpense() {
+            if (preventDoubleSubmit('addExpense')) return;
             var note = document.getElementById('exp-note').value;
             var amount = Number(document.getElementById('exp-amount').value);
             var method = document.getElementById('exp-method').value;
@@ -1194,6 +1278,7 @@
         }
 
         function addIncome() {
+            if (preventDoubleSubmit('addIncome')) return;
             var note = document.getElementById('inc-note').value;
             var amount = Number(document.getElementById('inc-amount').value);
             var method = document.getElementById('inc-method').value;
@@ -2754,6 +2839,7 @@
                     <div class="cc-actions">
                         <button class="cc-btn-receipt" onclick="printReceipt(${o.id})">🖨️ Chek</button>
                         ${hasDebt ? '<button class="cc-btn-pay" onclick="openDebtModal(' + o.id + ')">💰 Qarz to\'lash</button>' : ''}
+                        ${hasDebt ? '<button onclick="openDiscModal(' + o.id + ')" style="background:#ede9fe; color:#7c3aed;">🏷️ Chegirma</button>' : ''}
                         <button class="cc-btn-install ${installed ? 'done' : ''}" onclick="toggleInstalled(${o.id})">${installed ? '↩️ Bekor qilish' : '🔧 O\'rnatildi'}</button>
                         <button onclick="openEditOrderModal(${o.id})" style="background:#dbeafe; color:#2563eb;">✏️ Tahrirlash</button>
                         <button class="cc-btn-delete" onclick="deleteOrder(${o.id})">🗑️</button>
@@ -2907,12 +2993,78 @@
             document.getElementById('debt-modal').style.display = 'flex';
         }
 
+        var discModalOrderId = null;
+
+        function openDiscModal(id) {
+            var o = orders.find(function(x){ return x.id === id; });
+            if(!o) return;
+            discModalOrderId = id;
+            document.getElementById('disc-cust-name').innerText = 'Mijoz: ' + o.client + (o.phone ? ' (' + o.phone + ')' : '');
+            document.getElementById('disc-current-debt').innerText = "Joriy qarz: " + fmt(o.debt) + " so'm";
+            document.getElementById('disc-amount').value = '';
+            updateDiscPreview();
+            document.getElementById('disc-modal').style.display = 'flex';
+        }
+
+        function closeDiscModal() {
+            document.getElementById('disc-modal').style.display = 'none';
+            discModalOrderId = null;
+        }
+
+        function fillFullDiscount() {
+            var o = orders.find(function(x){ return x.id === discModalOrderId; });
+            if(!o) return;
+            document.getElementById('disc-amount').value = o.debt;
+            updateDiscPreview();
+        }
+
+        function updateDiscPreview() {
+            var o = orders.find(function(x){ return x.id === discModalOrderId; });
+            var box = document.getElementById('disc-preview');
+            if(!o) { box.innerText = ''; return; }
+            var amt = Number(document.getElementById('disc-amount').value) || 0;
+            if(amt <= 0) { box.innerText = ''; return; }
+            if(amt > o.debt) { box.innerText = "⚠️ Chegirma qarzdan (" + fmt(o.debt) + " so'm) katta bo'lishi mumkin emas"; return; }
+            box.innerText = "Chegirmadan keyingi qarz: " + fmt(o.debt - amt) + " so'm";
+        }
+
+        function confirmDiscount() {
+            if (preventDoubleSubmit('confirmDiscount')) return;
+            var o = orders.find(function(x){ return x.id === discModalOrderId; });
+            if(!o) return;
+
+            var amt = Number(document.getElementById('disc-amount').value);
+            if(!amt || amt <= 0) return alert("To'g'ri summa kiriting!");
+            if(amt > o.debt) return alert("Chegirma qarzdan (" + fmt(o.debt) + " so'm) katta bo'lishi mumkin emas!");
+
+            // Chegirma ham qo'shiladi, qarz ham shuncha kamayadi — shuning uchun
+            // "haqiqatan kassaga tushgan pul" (narx - chegirma - qarz) o'zgarmaydi.
+            o.discount = (o.discount || 0) + amt;
+            o.debt -= amt;
+            if(!o.discountLog) o.discountLog = [];
+            o.discountLog.push({ date: todayStr(), amount: amt });
+
+            persistAll();
+
+            sendTelegramMessage(
+                '🏷️ <b>Qarzdan chegirma qilindi</b>\n' +
+                '👤 Mijoz: ' + o.client + ' (' + o.phone + ')\n' +
+                '➖ Chegirma: ' + fmt(amt) + " so'm\n" +
+                '❗ Qolgan qarz: ' + fmt(o.debt) + " so'm"
+            );
+
+            closeDiscModal();
+            renderCustomers();
+            renderFinance();
+        }
+
         function closeDebtModal() {
             document.getElementById('debt-modal').style.display = 'none';
             debtModalOrderId = null;
         }
 
         function confirmDebtPayment() {
+            if (preventDoubleSubmit('confirmDebtPayment')) return;
             var o = orders.find(function(x){ return x.id === debtModalOrderId; });
             if(!o) return;
 
@@ -3136,6 +3288,166 @@
             alert('❌ RawBT orqali chop etishda xatolik: ' + e.message + '\n\nRawBT ilovasi telefoningizda o\'rnatilganligini tekshiring.');
         }
     }
+    </script>
+
+    <!-- ===== KALKULYATOR MANTIQI ===== -->
+    <script>
+    (function() {
+        var st;
+        function resetAll() { st = { disp: '0', prev: null, op: null, wait: false, lastOp: null, lastVal: null, err: false, clearable: false }; }
+        resetAll();
+
+        var elDisp = document.getElementById('calc-display');
+        var elAC = document.getElementById('calc-ac');
+
+        function fmtNum(s) {
+            if (s === 'Xato') return s;
+            var neg = s.charAt(0) === '-';
+            if (neg) s = s.slice(1);
+            var parts = s.split('.');
+            var i = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            return (neg ? '-' : '') + i + (parts.length > 1 ? ',' + parts[1] : '');
+        }
+
+        function render() {
+            var t = fmtNum(st.disp);
+            elDisp.innerText = t;
+            var L = t.length;
+            elDisp.style.fontSize = L >= 17 ? '34px' : L >= 14 ? '40px' : L >= 12 ? '46px' : L >= 10 ? '54px' : L >= 8 ? '62px' : '72px';
+            elAC.innerText = st.clearable && !st.err ? 'C' : 'AC';
+        }
+
+        function numStr(x) {
+            var r = parseFloat(x.toPrecision(12));
+            var s = String(r);
+            if (s.indexOf('e') > -1) s = r.toExponential(5);
+            return s;
+        }
+
+        function compute(a, b, op) {
+            var r;
+            if (op === '+') r = a + b;
+            else if (op === '-') r = a - b;
+            else if (op === '*') r = a * b;
+            else if (op === '/') { if (b === 0) return null; r = a / b; }
+            return r;
+        }
+
+        function setErr() { resetAll(); st.disp = 'Xato'; st.err = true; clearActive(); render(); }
+
+        function clearActive() {
+            var ops = document.querySelectorAll('#calc-grid .calc-o');
+            for (var i = 0; i < ops.length; i++) ops[i].classList.remove('active');
+        }
+        function highlight(op) {
+            clearActive();
+            var b = document.querySelector('#calc-grid .calc-o[data-k="' + op + '"]');
+            if (b) b.classList.add('active');
+        }
+
+        function digit(d) {
+            if (st.err) resetAll();
+            if (st.wait) {
+                st.disp = d; st.wait = false;
+            } else {
+                if (st.disp === '-0') { st.disp = '-' + d; }
+                else {
+                    if (st.disp.replace(/[-.]/g, '').length >= 12) return;
+                    st.disp = (st.disp === '0') ? d : st.disp + d;
+                }
+            }
+            st.clearable = true; clearActive(); render();
+        }
+
+        function dot() {
+            if (st.err) resetAll();
+            if (st.wait) { st.disp = '0.'; st.wait = false; }
+            else if (st.disp.indexOf('.') < 0) st.disp += '.';
+            st.clearable = true; clearActive(); render();
+        }
+
+        function operator(o) {
+            if (st.err) return;
+            var cur = parseFloat(st.disp);
+            if (st.op && !st.wait) {
+                var r = compute(st.prev, cur, st.op);
+                if (r === null) { setErr(); return; }
+                st.prev = r; st.disp = numStr(r);
+            } else if (!st.op) {
+                st.prev = cur;
+            }
+            st.op = o; st.wait = true; st.lastOp = null;
+            highlight(o); render();
+        }
+
+        function equals() {
+            if (st.err) return;
+            var cur = parseFloat(st.disp), r;
+            if (st.op) {
+                var b = st.wait ? st.prev : cur;
+                r = compute(st.prev, b, st.op);
+                st.lastOp = st.op; st.lastVal = b;
+            } else if (st.lastOp) {
+                r = compute(cur, st.lastVal, st.lastOp);
+            } else return;
+            if (r === null) { setErr(); return; }
+            st.disp = numStr(r); st.prev = null; st.op = null; st.wait = true; st.clearable = false;
+            clearActive(); render();
+        }
+
+        function sign() {
+            if (st.err) return;
+            if (st.wait && st.op) { st.disp = '-0'; st.wait = false; }
+            else st.disp = st.disp.charAt(0) === '-' ? st.disp.slice(1) : '-' + st.disp;
+            st.clearable = true; render();
+        }
+
+        function percent() {
+            if (st.err) return;
+            var cur = parseFloat(st.disp), v;
+            if (st.op && !st.wait && (st.op === '+' || st.op === '-')) v = st.prev * cur / 100;
+            else v = cur / 100;
+            st.disp = numStr(v); st.clearable = true; render();
+        }
+
+        function clearKey() {
+            if (st.clearable && !st.err) { st.disp = '0'; st.clearable = false; if (st.op) st.wait = false; render(); }
+            else { resetAll(); clearActive(); render(); }
+        }
+
+        function backspace() {
+            if (st.wait || st.err) return;
+            if (st.disp.length <= 1 || (st.disp.length === 2 && st.disp.charAt(0) === '-')) st.disp = '0';
+            else st.disp = st.disp.slice(0, -1);
+            render();
+        }
+
+        document.getElementById('calc-grid').addEventListener('click', function(e) {
+            var btn = e.target.closest ? e.target.closest('button[data-k]') : null;
+            if (!btn) return;
+            var k = btn.getAttribute('data-k');
+            if (/^[0-9]$/.test(k)) digit(k);
+            else if (k === '.') dot();
+            else if (k === '+' || k === '-' || k === '*' || k === '/') operator(k);
+            else if (k === '=') equals();
+            else if (k === 'ac') clearKey();
+            else if (k === 'sign') sign();
+            else if (k === 'pct') percent();
+        });
+
+        // Ekranni chapga/o'ngga surib, oxirgi raqamni o'chirish (iPhone kabi)
+        var sx = null;
+        elDisp.addEventListener('touchstart', function(e) { sx = e.touches[0].clientX; }, { passive: true });
+        elDisp.addEventListener('touchend', function(e) {
+            if (sx === null) return;
+            var dx = e.changedTouches[0].clientX - sx; sx = null;
+            if (Math.abs(dx) > 25) backspace();
+        }, { passive: true });
+
+        window.openCalc = function() { document.getElementById('calc-modal').style.display = 'flex'; };
+        window.closeCalc = function() { document.getElementById('calc-modal').style.display = 'none'; };
+        render();
+    })();
     </script>
 </body>
 </html>
