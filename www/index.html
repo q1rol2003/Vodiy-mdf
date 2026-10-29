@@ -50,6 +50,29 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 99999;
         }
+        /* ===== PIN KIRISH — rasmdagi (Samsung) ko'rinish ===== */
+        #login-modal { background: radial-gradient(ellipse at 50% 30%, #2a2f36 0%, #15181d 55%, #0b0d10 100%) !important; flex-direction: column; }
+        .pin-box { width: 100%; max-width: 340px; background: transparent; color: #fff; padding: 0 16px; box-shadow: none; text-align: center; }
+        .pin-box h2 { color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; margin: 0 0 6px; letter-spacing: 0.5px; }
+        .pin-hint { color: #f5f6f7; font-size: 17px; font-weight: 600; margin: 0 0 18px; line-height: 1.35; }
+        .pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 8px; min-height: 12px; }
+        .pin-dots i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.5); display: inline-block; box-sizing: border-box; }
+        .pin-dots i.on { background: #e5e7eb; border-color: #e5e7eb; }
+        .pin-dots.shake { animation: pinShake .4s; }
+        @keyframes pinShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-7px)} 80%{transform:translateX(7px)} }
+        .pin-err { color: #ff6b6b !important; font-size: 13px; font-weight: 500; margin: 0 0 4px; min-height: 16px; }
+        .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 14px; margin-top: 14px; justify-items: center; }
+        .pin-key { width: 84px; height: 84px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.40); background: rgba(45,50,58,0.55); color: #f5f6f7; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; margin: 0; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
+        .pin-key span { font-size: 34px; font-weight: 400; line-height: 1; }
+        .pin-key small { font-size: 10px; font-weight: 600; letter-spacing: 2px; color: #c9ced6; margin-top: 3px; }
+        .pin-key:active { background: rgba(255,255,255,0.18); }
+        /* .login-box button qoidasini bekor qilish (doiralar aniq doira bo'lishi uchun) */
+        .pin-box .pin-key { width: 84px; height: 84px; min-width: 84px; border-radius: 50%; background: rgba(45,50,58,0.55); color: #f5f6f7; border: 1.5px solid rgba(255,255,255,0.40); padding: 0; margin: 0; font-size: 16px; font-weight: 400; }
+        .pin-box .pin-key.pin-ghost { background: transparent; border: none; }
+        .pin-box .pin-key:active { background: rgba(255,255,255,0.18); }
+        .pin-box .pin-key.pin-ghost:active { background: rgba(255,255,255,0.12); }
+        .pin-ghost span svg, .pin-ghost svg { width: 26px; height: 26px; display: block; }
+        #pin-bio svg { width: 34px; height: 34px; }
         .login-box {
             background: white; padding: 30px; border-radius: 12px;
             text-align: center; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
@@ -502,12 +525,26 @@
 
     <!-- LOGIN PAROL OYNASI -->
     <div id="login-modal">
-        <div class="login-box">
-            <h2>🚪 Vodiy MDF</h2>
-            <p style="color: #666; font-size: 13px; margin-top: 5px;">Tizimga kirish</p>
-            <input type="password" id="pass-val" placeholder="Parol" autofocus>
-            <button onclick="login()">KIRISH</button>
-            <p id="err-txt" style="color: red; font-size: 13px; font-weight: bold; margin-top: 10px; display: none;">Parol xato!</p>
+        <div class="login-box pin-box">
+            <h2>VODIY MDF</h2>
+            <p class="pin-hint">Telegramdan foydalanish uchun qulfdan chiqaring.<br>Parolni kiriting yoki barmoq izidan foydalaning</p>
+            <div id="pin-dots" class="pin-dots"></div>
+            <input type="password" id="pass-val" style="display:none;" tabindex="-1">
+            <p id="err-txt" class="pin-err" style="display:none;">PIN noto'g'ri!</p>
+            <div class="pin-pad">
+                <button type="button" class="pin-key" onclick="pinPress('1')"><span>1</span></button>
+                <button type="button" class="pin-key" onclick="pinPress('2')"><span>2</span><small>ABC</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('3')"><span>3</span><small>DEF</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('4')"><span>4</span><small>GHI</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('5')"><span>5</span><small>JKL</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('6')"><span>6</span><small>MNO</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('7')"><span>7</span><small>PQRS</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('8')"><span>8</span><small>TUV</small></button>
+                <button type="button" class="pin-key" onclick="pinPress('9')"><span>9</span><small>WXYZ</small></button>
+                <button type="button" class="pin-key pin-ghost" onclick="pinPress('del')" title="O'chirish"><svg viewBox="0 0 24 24" fill="none" stroke="#f5f6f7" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M9 5H20a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z"/><path d="M13 9l5 6M18 9l-5 6"/></svg></button>
+                <button type="button" class="pin-key" onclick="pinPress('0')"><span>0</span></button>
+                <button type="button" class="pin-key pin-ghost" id="pin-bio" onclick="pinBiometric()" title="Barmoq izi / yuz"><svg viewBox="0 0 24 24" fill="none" stroke="#f5f6f7" stroke-width="1.4" stroke-linecap="round"><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0v2"/><path d="M4 12a8 8 0 0 1 16 0c0 3-.5 5.5-1.5 7.5"/><path d="M8.5 13.5v1.5c0 2.2-.6 4.2-1.8 6"/><path d="M12 12.5v1.2c0 3.2-.9 6-2.6 8.3"/><path d="M15.5 13.5v1c0 2.4-.4 4.4-1.3 6.2"/><path d="M6.5 9.5v2.5c0 3 .6 5.5 1.7 7.5"/></svg></button>
+            </div>
         </div>
     </div>
 
@@ -932,11 +969,87 @@
             if(val === appPassword) {
                 document.getElementById('login-modal').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
+                document.getElementById('pass-val').value = '';
+                renderPinDots();
                 init();
             } else {
                 document.getElementById('err-txt').style.display = 'block';
+                shakePin();
+                document.getElementById('pass-val').value = '';
+                renderPinDots();
             }
         }
+
+        // ===== PIN klaviatura mantig'i =====
+        function renderPinDots() {
+            var el = document.getElementById('pass-val');
+            var box = document.getElementById('pin-dots');
+            if (!el || !box) return;
+            var n = Math.max(4, (appPassword || '').length);
+            var html = '';
+            for (var i = 0; i < n; i++) html += '<i class="' + (i < el.value.length ? 'on' : '') + '"></i>';
+            box.innerHTML = html;
+        }
+
+        function shakePin() {
+            var box = document.getElementById('pin-dots');
+            if (!box) return;
+            box.classList.remove('shake');
+            void box.offsetWidth;
+            box.classList.add('shake');
+        }
+
+        function pinPress(k) {
+            var el = document.getElementById('pass-val');
+            document.getElementById('err-txt').style.display = 'none';
+            if (k === 'del') {
+                el.value = el.value.slice(0, -1);
+                renderPinDots();
+                return;
+            }
+            if (el.value.length >= 12) return;
+            el.value += k;
+            renderPinDots();
+            // Parol uzunligiga yetganda avtomatik tekshiriladi
+            if (el.value.length >= (appPassword || '').length) {
+                setTimeout(function(){ login(); }, 120);
+            }
+        }
+
+        // Barmoq izi / yuz bilan ochish (Android plagini orqali). Plagin o'rnatilmagan bo'lsa, PIN ishlaydi.
+        async function pinBiometric() {
+            var NB = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.NativeBiometric;
+            if (!NB) {
+                alert("Barmoq izi / yuz hali yoqilmagan. PIN kod bilan kiring.");
+                return;
+            }
+            try {
+                var av = await NB.isAvailable();
+                if (!av || !av.isAvailable) {
+                    alert("Bu qurilmada barmoq izi yoki yuz sozlanmagan. Telefon sozlamalaridan qo'shing.");
+                    return;
+                }
+                await NB.verifyIdentity({
+                    reason: "Ilovaga kirish",
+                    title: "Vodiy MDF",
+                    subtitle: "Barmoq izi yoki yuz",
+                    description: "Tasdiqlang"
+                });
+                if (!firebaseDataLoaded) {
+                    document.getElementById('sync-loading').style.display = 'flex';
+                    firebaseLoadCallbacks.push(function() {
+                        document.getElementById('sync-loading').style.display = 'none';
+                        attemptLogin(appPassword);
+                    });
+                } else {
+                    attemptLogin(appPassword);
+                }
+            } catch (e) {
+                // Bekor qilindi yoki muvaffaqiyatsiz — PIN ekran o'zicha qoladi
+            }
+        }
+
+        renderPinDots();
 
         function changePassword() {
             var cur = document.getElementById('cur-pass').value;
@@ -988,7 +1101,9 @@
             messagingSenderId: "469145908154",
             appId: "1:469145908154:web:e0e4d9188251fbe267e383"
         };
-        var firebaseReady = firebaseConfig.apiKey.indexOf('BU_YERGA') === -1;
+        // Firebase SDK internetdan yuklanmasa (masalan, oddiy ko'rish oynasida) ham PIN ekran ishlashi uchun tekshiriladi
+        var firebaseSdkOk = (typeof firebase !== 'undefined');
+        var firebaseReady = firebaseConfig.apiKey.indexOf('BU_YERGA') === -1 && firebaseSdkOk;
         var dataRef = null;
         var syncTimer = null;
         var lastLocalWriteTs = 0;
