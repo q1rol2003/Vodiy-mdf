@@ -5,7 +5,7 @@
   "dependencies": {
     "@capacitor/core": "^6.1.2",
     "@capacitor/android": "^6.1.2",
-    "@capacitor/filesystem": "^6.0.1"
+    "@capacitor/filesystem": "^6.0.1",
     "@capgo/capacitor-native-biometric": "^6.0.0",
   },
   "devDependencies": {
